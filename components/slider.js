@@ -9,7 +9,7 @@ var Slider = React.createClass({
     min: React.PropTypes.number,
     max: React.PropTypes.number,
     step: React.PropTypes.number,
-    initialValue: React.PropTypes.number,
+    value: React.PropTypes.number.isRequired,
     toolTip: React.PropTypes.bool,
     onSlide: React.PropTypes.func
   },
@@ -19,7 +19,7 @@ var Slider = React.createClass({
       min: 0,
       max: 100,
       step: 1,
-      initialValue: 50,
+      value: 50,
       toolTip: false,
       onSlide: function() {}
     };
@@ -33,7 +33,7 @@ var Slider = React.createClass({
       min: this.props.min,
       max: this.props.max,
       step: this.props.step,
-      value: this.props.initialValue,
+      value: this.props.value,
       tooltip: toolTip
     });
     
