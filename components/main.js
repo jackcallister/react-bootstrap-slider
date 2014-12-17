@@ -17,7 +17,7 @@ var App = React.createClass({
 
   render: function() {
     return (
-      <Slider id='jack' min={0} max={10} step={1} value={this.state.value} toolTip={false} onSlide={this.didChange} />
+      <Slider min={0} max={10} step={1} value={this.state.value} toolTip={false} onSlide={this.didChange} />
     );
   }
 });

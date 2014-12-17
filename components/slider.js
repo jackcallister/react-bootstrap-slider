@@ -1,6 +1,6 @@
 var React = require('react');
     jQuery = require('jquery'),
-    BootstapSlider = require('bootstrap-slider');
+    BootstrapSlider = require('bootstrap-slider');
 
 var Slider = React.createClass({
 
@@ -25,10 +25,14 @@ var Slider = React.createClass({
     };
   },
 
+  componentWillReceiveProps: function(nextProps) {
+    this.state.slider.setValue(this.props.value);
+  },
+
   componentDidMount: function() {
     var toolTip = this.props.toolTip ? 'show' : 'hide';
 
-    var slider = new BootstapSlider(this.getDOMNode(), {
+    var slider = new BootstrapSlider(this.getDOMNode(), {
       id: this.props.id,
       min: this.props.min,
       max: this.props.max,
@@ -39,6 +43,7 @@ var Slider = React.createClass({
     
     slider.on('slide', function(event) {
       this.props.onSlide(event);
+      this.state.slider.setValue(this.props.value);
     }.bind(this));
 
     this.setState({
