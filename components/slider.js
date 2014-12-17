@@ -25,8 +25,8 @@ var Slider = React.createClass({
     };
   },
 
-  componentWillReceiveProps: function(nextProps) {
-    this.state.slider.setValue(this.props.value);
+  componentWillUpdate: function(nextProps, nextState) {
+    nextState.slider.setValue(nextProps.value);
   },
 
   componentDidMount: function() {

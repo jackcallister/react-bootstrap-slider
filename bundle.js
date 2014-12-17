@@ -55,6 +55,12 @@
 	    };
 	  },
 
+	  increment: function(event) {
+	    this.setState({
+	      value: this.state.value + 1
+	    });
+	  },
+
 	  didChange: function(event) {
 	    this.setState({
 	      value: event.value
@@ -63,7 +69,10 @@
 
 	  render: function() {
 	    return (
-	      React.createElement(Slider, {min: 0, max: 10, step: 1, value: this.state.value, toolTip: false, onSlide: this.didChange})
+	      React.createElement("div", null, 
+	        React.createElement(Slider, {min: 0, max: 10, step: 1, value: this.state.value, toolTip: false, onSlide: this.didChange}), 
+	        React.createElement("button", {onClick: this.increment}, "Increment")
+	      )
 	    );
 	  }
 	});
@@ -76,8 +85,8 @@
 /***/ function(module, exports, __webpack_require__) {
 
 	var React = __webpack_require__(2);
-	    jQuery = __webpack_require__(3),
-	    BootstrapSlider = __webpack_require__(4);
+	    jQuery = __webpack_require__(4),
+	    BootstrapSlider = __webpack_require__(3);
 
 	var Slider = React.createClass({displayName: 'Slider',
 
@@ -102,8 +111,8 @@
 	    };
 	  },
 
-	  componentWillReceiveProps: function(nextProps) {
-	    this.state.slider.setValue(this.props.value);
+	  componentWillUpdate: function(nextProps, nextState) {
+	    nextState.slider.setValue(nextProps.value);
 	  },
 
 	  componentDidMount: function() {
@@ -147,6 +156,1215 @@
 
 /***/ },
 /* 3 */
+/***/ function(module, exports, __webpack_require__) {
+
+	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*! =========================================================
+	 * bootstrap-slider.js
+	 *
+	 * Maintainers:
+	 *		Kyle Kemp
+	 *			- Twitter: @seiyria
+	 *			- Github:  seiyria
+	 *		Rohit Kalkur
+	 *			- Twitter: @Rovolutionary
+	 *			- Github:  rovolution
+	 *
+	 * =========================================================
+	 *
+	 * Licensed under the Apache License, Version 2.0 (the "License");
+	 * you may not use this file except in compliance with the License.
+	 * You may obtain a copy of the License at
+	 *
+	 * http://www.apache.org/licenses/LICENSE-2.0
+	 *
+	 * Unless required by applicable law or agreed to in writing, software
+	 * distributed under the License is distributed on an "AS IS" BASIS,
+	 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+	 * See the License for the specific language governing permissions and
+	 * limitations under the License.
+	 * ========================================================= */
+
+
+	/**
+	 * Bridget makes jQuery widgets
+	 * v1.0.1
+	 * MIT license
+	 */
+
+	(function(root, factory) {
+		if(true) {
+			!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(4)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
+		} else if(typeof module === "object" && module.exports) {
+			var jQuery;
+			try {
+				jQuery = require("jquery");
+			} catch (err) {
+				jQuery = null;
+			}
+			module.exports = factory(jQuery);
+		} else {
+			root.Slider = factory(root.jQuery);
+		}
+	}(this, function($) {
+		// Reference to Slider constructor
+		var Slider;
+
+
+		(function( $ ) {
+
+			'use strict';
+
+			// -------------------------- utils -------------------------- //
+
+			var slice = Array.prototype.slice;
+
+			function noop() {}
+
+			// -------------------------- definition -------------------------- //
+
+			function defineBridget( $ ) {
+
+				// bail if no jQuery
+				if ( !$ ) {
+					return;
+				}
+
+				// -------------------------- addOptionMethod -------------------------- //
+
+				/**
+				 * adds option method -> $().plugin('option', {...})
+				 * @param {Function} PluginClass - constructor class
+				 */
+				function addOptionMethod( PluginClass ) {
+					// don't overwrite original option method
+					if ( PluginClass.prototype.option ) {
+						return;
+					}
+
+				  // option setter
+				  PluginClass.prototype.option = function( opts ) {
+				    // bail out if not an object
+				    if ( !$.isPlainObject( opts ) ){
+				      return;
+				    }
+				    this.options = $.extend( true, this.options, opts );
+				  };
+				}
+
+
+				// -------------------------- plugin bridge -------------------------- //
+
+				// helper function for logging errors
+				// $.error breaks jQuery chaining
+				var logError = typeof console === 'undefined' ? noop :
+				  function( message ) {
+				    console.error( message );
+				  };
+
+				/**
+				 * jQuery plugin bridge, access methods like $elem.plugin('method')
+				 * @param {String} namespace - plugin name
+				 * @param {Function} PluginClass - constructor class
+				 */
+				function bridge( namespace, PluginClass ) {
+				  // add to jQuery fn namespace
+				  $.fn[ namespace ] = function( options ) {
+				    if ( typeof options === 'string' ) {
+				      // call plugin method when first argument is a string
+				      // get arguments for method
+				      var args = slice.call( arguments, 1 );
+
+				      for ( var i=0, len = this.length; i < len; i++ ) {
+				        var elem = this[i];
+				        var instance = $.data( elem, namespace );
+				        if ( !instance ) {
+				          logError( "cannot call methods on " + namespace + " prior to initialization; " +
+				            "attempted to call '" + options + "'" );
+				          continue;
+				        }
+				        if ( !$.isFunction( instance[options] ) || options.charAt(0) === '_' ) {
+				          logError( "no such method '" + options + "' for " + namespace + " instance" );
+				          continue;
+				        }
+
+				        // trigger method with arguments
+				        var returnValue = instance[ options ].apply( instance, args);
+
+				        // break look and return first value if provided
+				        if ( returnValue !== undefined && returnValue !== instance) {
+				          return returnValue;
+				        }
+				      }
+				      // return this if no return value
+				      return this;
+				    } else {
+				      var objects = this.map( function() {
+				        var instance = $.data( this, namespace );
+				        if ( instance ) {
+				          // apply options & init
+				          instance.option( options );
+				          instance._init();
+				        } else {
+				          // initialize new instance
+				          instance = new PluginClass( this, options );
+				          $.data( this, namespace, instance );
+				        }
+				        return $(this);
+				      });
+
+				      if(!objects || objects.length > 1) {
+				      	return objects;
+				      } else {
+				      	return objects[0];
+				      }
+				    }
+				  };
+
+				}
+
+				// -------------------------- bridget -------------------------- //
+
+				/**
+				 * converts a Prototypical class into a proper jQuery plugin
+				 *   the class must have a ._init method
+				 * @param {String} namespace - plugin name, used in $().pluginName
+				 * @param {Function} PluginClass - constructor class
+				 */
+				$.bridget = function( namespace, PluginClass ) {
+				  addOptionMethod( PluginClass );
+				  bridge( namespace, PluginClass );
+				};
+
+				return $.bridget;
+
+			}
+
+		  	// get jquery from browser global
+		  	defineBridget( $ );
+
+		})( $ );
+
+
+		/*************************************************
+
+				BOOTSTRAP-SLIDER SOURCE CODE
+
+		**************************************************/
+
+		(function($) {
+
+			var ErrorMsgs = {
+				formatInvalidInputErrorMsg : function(input) {
+					return "Invalid input value '" + input + "' passed in";
+				},
+				callingContextNotSliderInstance : "Calling context element does not have instance of Slider bound to it. Check your code to make sure the JQuery object returned from the call to the slider() initializer is calling the method"
+			};
+
+
+
+			/*************************************************
+
+								CONSTRUCTOR
+
+			**************************************************/
+			Slider = function(element, options) {
+				createNewSlider.call(this, element, options);
+				return this;
+			};
+
+			function createNewSlider(element, options) {
+				/*************************************************
+
+								Create Markup
+
+				**************************************************/
+				if(typeof element === "string") {
+					this.element = document.querySelector(element);
+				} else if(element instanceof HTMLElement) {
+					this.element = element;
+				}
+
+				var origWidth = this.element.style.width;
+				var updateSlider = false;
+				var parent = this.element.parentNode;
+				var sliderTrackSelection;
+				var sliderMinHandle;
+				var sliderMaxHandle;
+
+				if (this.sliderElem) {
+					updateSlider = true;
+				} else {
+					/* Create elements needed for slider */
+					this.sliderElem = document.createElement("div");
+					this.sliderElem.className = "slider";
+
+					/* Create slider track elements */
+					var sliderTrack = document.createElement("div");
+					sliderTrack.className = "slider-track";
+
+					sliderTrackSelection = document.createElement("div");
+					sliderTrackSelection.className = "slider-selection";
+
+					sliderMinHandle = document.createElement("div");
+					sliderMinHandle.className = "slider-handle min-slider-handle";
+
+					sliderMaxHandle = document.createElement("div");
+					sliderMaxHandle.className = "slider-handle max-slider-handle";
+
+					sliderTrack.appendChild(sliderTrackSelection);
+					sliderTrack.appendChild(sliderMinHandle);
+					sliderTrack.appendChild(sliderMaxHandle);
+
+					var createAndAppendTooltipSubElements = function(tooltipElem) {
+						var arrow = document.createElement("div");
+						arrow.className = "tooltip-arrow";
+
+						var inner = document.createElement("div");
+						inner.className = "tooltip-inner";
+
+						tooltipElem.appendChild(arrow);
+						tooltipElem.appendChild(inner);
+					};
+
+					/* Create tooltip elements */
+					var sliderTooltip = document.createElement("div");
+					sliderTooltip.className = "tooltip tooltip-main";
+					createAndAppendTooltipSubElements(sliderTooltip);
+
+					var sliderTooltipMin = document.createElement("div");
+					sliderTooltipMin.className = "tooltip tooltip-min";
+					createAndAppendTooltipSubElements(sliderTooltipMin);
+
+					var sliderTooltipMax = document.createElement("div");
+					sliderTooltipMax.className = "tooltip tooltip-max";
+					createAndAppendTooltipSubElements(sliderTooltipMax);
+
+
+					/* Append components to sliderElem */
+					this.sliderElem.appendChild(sliderTrack);
+					this.sliderElem.appendChild(sliderTooltip);
+					this.sliderElem.appendChild(sliderTooltipMin);
+					this.sliderElem.appendChild(sliderTooltipMax);
+
+					/* Append slider element to parent container, right before the original <input> element */
+					parent.insertBefore(this.sliderElem, this.element);
+
+					/* Hide original <input> element */
+					this.element.style.display = "none";
+				}
+				/* If JQuery exists, cache JQ references */
+				if($) {
+					this.$element = $(this.element);
+					this.$sliderElem = $(this.sliderElem);
+				}
+
+				/*************************************************
+
+								Process Options
+
+				**************************************************/
+				options = options ? options : {};
+				var optionTypes = Object.keys(this.defaultOptions);
+
+				for(var i = 0; i < optionTypes.length; i++) {
+					var optName = optionTypes[i];
+
+					// First check if an option was passed in via the constructor
+					var val = options[optName];
+					// If no data attrib, then check data atrributes
+					val = (typeof val !== 'undefined') ? val : getDataAttrib(this.element, optName);
+					// Finally, if nothing was specified, use the defaults
+					val = (val !== null) ? val : this.defaultOptions[optName];
+
+					// Set all options on the instance of the Slider
+					if(!this.options) {
+						this.options = {};
+					}
+					this.options[optName] = val;
+				}
+
+				function getDataAttrib(element, optName) {
+					var dataName = "data-slider-" + optName;
+					var dataValString = element.getAttribute(dataName);
+
+					try {
+						return JSON.parse(dataValString);
+					}
+					catch(err) {
+						return dataValString;
+					}
+				}
+
+				/*************************************************
+
+									Setup
+
+				**************************************************/
+				this.eventToCallbackMap = {};
+				this.sliderElem.id = this.options.id;
+
+				this.touchCapable = 'ontouchstart' in window || (window.DocumentTouch && document instanceof window.DocumentTouch);
+
+				this.tooltip = this.sliderElem.querySelector('.tooltip-main');
+				this.tooltipInner = this.tooltip.querySelector('.tooltip-inner');
+
+				this.tooltip_min = this.sliderElem.querySelector('.tooltip-min');
+				this.tooltipInner_min = this.tooltip_min.querySelector('.tooltip-inner');
+
+				this.tooltip_max = this.sliderElem.querySelector('.tooltip-max');
+				this.tooltipInner_max= this.tooltip_max.querySelector('.tooltip-inner');
+
+				if (updateSlider === true) {
+					// Reset classes
+					this._removeClass(this.sliderElem, 'slider-horizontal');
+					this._removeClass(this.sliderElem, 'slider-vertical');
+					this._removeClass(this.tooltip, 'hide');
+					this._removeClass(this.tooltip_min, 'hide');
+					this._removeClass(this.tooltip_max, 'hide');
+
+					// Undo existing inline styles for track
+					["left", "top", "width", "height"].forEach(function(prop) {
+						this._removeProperty(this.trackSelection, prop);
+					}, this);
+
+					// Undo inline styles on handles
+					[this.handle1, this.handle2].forEach(function(handle) {
+						this._removeProperty(handle, 'left');
+						this._removeProperty(handle, 'top');
+					}, this);
+
+					// Undo inline styles and classes on tooltips
+					[this.tooltip, this.tooltip_min, this.tooltip_max].forEach(function(tooltip) {
+						this._removeProperty(tooltip, 'left');
+						this._removeProperty(tooltip, 'top');
+						this._removeProperty(tooltip, 'margin-left');
+						this._removeProperty(tooltip, 'margin-top');
+
+						this._removeClass(tooltip, 'right');
+						this._removeClass(tooltip, 'top');
+					}, this);
+				}
+
+				if(this.options.orientation === 'vertical') {
+					this._addClass(this.sliderElem,'slider-vertical');
+
+					this.stylePos = 'top';
+					this.mousePos = 'pageY';
+					this.sizePos = 'offsetHeight';
+
+					this._addClass(this.tooltip, 'right');
+					this.tooltip.style.left = '100%';
+
+					this._addClass(this.tooltip_min, 'right');
+					this.tooltip_min.style.left = '100%';
+
+					this._addClass(this.tooltip_max, 'right');
+					this.tooltip_max.style.left = '100%';
+				} else {
+					this._addClass(this.sliderElem, 'slider-horizontal');
+					this.sliderElem.style.width = origWidth;
+
+					this.options.orientation = 'horizontal';
+					this.stylePos = 'left';
+					this.mousePos = 'pageX';
+					this.sizePos = 'offsetWidth';
+
+					this._addClass(this.tooltip, 'top');
+					this.tooltip.style.top = -this.tooltip.outerHeight - 14 + 'px';
+
+					this._addClass(this.tooltip_min, 'top');
+					this.tooltip_min.style.top = -this.tooltip_min.outerHeight - 14 + 'px';
+
+					this._addClass(this.tooltip_max, 'top');
+					this.tooltip_max.style.top = -this.tooltip_max.outerHeight - 14 + 'px';
+				}
+
+				if (this.options.value instanceof Array) {
+					this.options.range = true;
+				} else if (this.options.range) {
+					// User wants a range, but value is not an array
+					this.options.value = [this.options.value, this.options.max];
+				}
+
+				this.trackSelection = sliderTrackSelection || this.trackSelection;
+				if (this.options.selection === 'none') {
+					this._addClass(this.trackSelection, 'hide');
+				}
+
+				this.handle1 = sliderMinHandle || this.handle1;
+				this.handle2 = sliderMaxHandle || this.handle2;
+
+				if (updateSlider === true) {
+					// Reset classes
+					this._removeClass(this.handle1, 'round triangle');
+					this._removeClass(this.handle2, 'round triangle hide');
+				}
+
+				var availableHandleModifiers = ['round', 'triangle', 'custom'];
+				var isValidHandleType = availableHandleModifiers.indexOf(this.options.handle) !== -1;
+				if (isValidHandleType) {
+					this._addClass(this.handle1, this.options.handle);
+					this._addClass(this.handle2, this.options.handle);
+				}
+
+				this.offset = this._offset(this.sliderElem);
+				this.size = this.sliderElem[this.sizePos];
+				this.setValue(this.options.value);
+
+				/******************************************
+
+							Bind Event Listeners
+
+				******************************************/
+
+				// Bind keyboard handlers
+				this.handle1Keydown = this._keydown.bind(this, 0);
+				this.handle1.addEventListener("keydown", this.handle1Keydown, false);
+
+				this.handle2Keydown = this._keydown.bind(this, 1);
+				this.handle2.addEventListener("keydown", this.handle2Keydown, false);
+
+				if (this.touchCapable) {
+					// Bind touch handlers
+					this.mousedown = this._mousedown.bind(this);
+					this.sliderElem.addEventListener("touchstart", this.mousedown, false);
+				} else {
+					// Bind mouse handlers
+					this.mousedown = this._mousedown.bind(this);
+					this.sliderElem.addEventListener("mousedown", this.mousedown, false);
+				}
+
+				// Bind tooltip-related handlers
+				if(this.options.tooltip === 'hide') {
+					this._addClass(this.tooltip, 'hide');
+					this._addClass(this.tooltip_min, 'hide');
+					this._addClass(this.tooltip_max, 'hide');
+				} else if(this.options.tooltip === 'always') {
+					this._showTooltip();
+					this._alwaysShowTooltip = true;
+				} else {
+					this.showTooltip = this._showTooltip.bind(this);
+					this.hideTooltip = this._hideTooltip.bind(this);
+
+					this.sliderElem.addEventListener("mouseenter", this.showTooltip, false);
+					this.sliderElem.addEventListener("mouseleave", this.hideTooltip, false);
+
+					this.handle1.addEventListener("focus", this.showTooltip, false);
+					this.handle1.addEventListener("blur", this.hideTooltip, false);
+
+					this.handle2.addEventListener("focus", this.showTooltip, false);
+					this.handle2.addEventListener("blur", this.hideTooltip, false);
+				}
+
+				if(this.options.enabled) {
+					this.enable();
+				} else {
+					this.disable();
+				}
+			}
+
+			/*************************************************
+
+						INSTANCE PROPERTIES/METHODS
+
+			- Any methods bound to the prototype are considered
+			part of the plugin's `public` interface
+
+			**************************************************/
+			Slider.prototype = {
+				_init: function() {}, // NOTE: Must exist to support bridget
+
+				constructor: Slider,
+
+				defaultOptions: {
+					id: "",
+				  	min: 0,
+					max: 10,
+					step: 1,
+					precision: 0,
+					orientation: 'horizontal',
+					value: 5,
+					range: false,
+					selection: 'before',
+					tooltip: 'show',
+					tooltip_split: false,
+					handle: 'round',
+					reversed: false,
+					enabled: true,
+					formatter: function(val) {
+						if(val instanceof Array) {
+							return val[0] + " : " + val[1];
+						} else {
+							return val;
+						}
+					},
+					natural_arrow_keys: false
+				},
+
+				over: false,
+
+				inDrag: false,
+
+				getValue: function() {
+					if (this.options.range) {
+						return this.options.value;
+					}
+					return this.options.value[0];
+				},
+
+				setValue: function(val, triggerSlideEvent) {
+					if (!val) {
+						val = 0;
+					}
+					var oldValue = this.getValue();
+					this.options.value = this._validateInputValue(val);
+					var applyPrecision = this._applyPrecision.bind(this);
+
+					if (this.options.range) {
+						this.options.value[0] = applyPrecision(this.options.value[0]);
+						this.options.value[1] = applyPrecision(this.options.value[1]);
+
+						this.options.value[0] = Math.max(this.options.min, Math.min(this.options.max, this.options.value[0]));
+						this.options.value[1] = Math.max(this.options.min, Math.min(this.options.max, this.options.value[1]));
+					} else {
+						this.options.value = applyPrecision(this.options.value);
+						this.options.value = [ Math.max(this.options.min, Math.min(this.options.max, this.options.value))];
+						this._addClass(this.handle2, 'hide');
+						if (this.options.selection === 'after') {
+							this.options.value[1] = this.options.max;
+						} else {
+							this.options.value[1] = this.options.min;
+						}
+					}
+
+					this.diff = this.options.max - this.options.min;
+					if (this.diff > 0) {
+						this.percentage = [
+							(this.options.value[0] - this.options.min) * 100 / this.diff,
+							(this.options.value[1] - this.options.min) * 100 / this.diff,
+							this.options.step * 100 / this.diff
+						];
+					} else {
+						this.percentage = [0, 0, 100];
+					}
+
+					this._layout();
+					var newValue = this.options.range ? this.options.value : this.options.value[0];
+
+					if(triggerSlideEvent === true) {
+						this._trigger('slide', newValue);
+					}
+					if(oldValue !== newValue) {
+						this._trigger('change', {
+							oldValue: oldValue,
+							newValue: newValue
+						});
+					}
+					this._setDataVal(newValue);
+
+					return this;
+				},
+
+				destroy: function(){
+					// Remove event handlers on slider elements
+					this._removeSliderEventHandlers();
+
+					// Remove the slider from the DOM
+					this.sliderElem.parentNode.removeChild(this.sliderElem);
+					/* Show original <input> element */
+					this.element.style.display = "";
+
+					// Clear out custom event bindings
+					this._cleanUpEventCallbacksMap();
+
+					// Remove data values
+					this.element.removeAttribute("data");
+
+					// Remove JQuery handlers/data
+					if($) {
+						this._unbindJQueryEventHandlers();
+						this.$element.removeData('slider');
+					}
+				},
+
+				disable: function() {
+					this.options.enabled = false;
+					this.handle1.removeAttribute("tabindex");
+					this.handle2.removeAttribute("tabindex");
+					this._addClass(this.sliderElem, 'slider-disabled');
+					this._trigger('slideDisabled');
+
+					return this;
+				},
+
+				enable: function() {
+					this.options.enabled = true;
+					this.handle1.setAttribute("tabindex", 0);
+					this.handle2.setAttribute("tabindex", 0);
+					this._removeClass(this.sliderElem, 'slider-disabled');
+					this._trigger('slideEnabled');
+
+					return this;
+				},
+
+				toggle: function() {
+					if(this.options.enabled) {
+						this.disable();
+					} else {
+						this.enable();
+					}
+
+					return this;
+				},
+
+				isEnabled: function() {
+					return this.options.enabled;
+				},
+
+				on: function(evt, callback) {
+					if($) {
+						this.$element.on(evt, callback);
+						this.$sliderElem.on(evt, callback);
+					} else {
+						this._bindNonQueryEventHandler(evt, callback);
+					}
+					return this;
+				},
+
+				getAttribute: function(attribute) {
+					if(attribute) {
+						return this.options[attribute];
+					} else {
+						return this.options;
+					}
+				},
+
+				setAttribute: function(attribute, value) {
+					this.options[attribute] = value;
+					return this;
+				},
+
+				refresh: function() {
+					this._removeSliderEventHandlers();
+					createNewSlider.call(this, this.element, this.options);
+					if($) {
+						// Bind new instance of slider to the element
+						$.data(this.element, 'slider', this);
+					}
+					return this;
+				},
+
+				/******************************+
+
+							HELPERS
+
+				- Any method that is not part of the public interface.
+				- Place it underneath this comment block and write its signature like so:
+
+				  					_fnName : function() {...}
+
+				********************************/
+				_removeSliderEventHandlers: function() {
+					// Remove event listeners from handle1
+					this.handle1.removeEventListener("keydown", this.handle1Keydown, false);
+					this.handle1.removeEventListener("focus", this.showTooltip, false);
+					this.handle1.removeEventListener("blur", this.hideTooltip, false);
+
+					// Remove event listeners from handle2
+					this.handle2.removeEventListener("keydown", this.handle2Keydown, false);
+					this.handle2.removeEventListener("focus", this.handle2Keydown, false);
+					this.handle2.removeEventListener("blur", this.handle2Keydown, false);
+
+					// Remove event listeners from sliderElem
+					this.sliderElem.removeEventListener("mouseenter", this.showTooltip, false);
+					this.sliderElem.removeEventListener("mouseleave", this.hideTooltip, false);
+					this.sliderElem.removeEventListener("touchstart", this.mousedown, false);
+					this.sliderElem.removeEventListener("mousedown", this.mousedown, false);
+				},
+				_bindNonQueryEventHandler: function(evt, callback) {
+					if(this.eventToCallbackMap[evt]===undefined) {
+						this.eventToCallbackMap[evt] = [];
+					}
+					this.eventToCallbackMap[evt].push(callback);
+				},
+				_cleanUpEventCallbacksMap: function() {
+					var eventNames = Object.keys(this.eventToCallbackMap);
+					for(var i = 0; i < eventNames.length; i++) {
+						var eventName = eventNames[i];
+						this.eventToCallbackMap[eventName] = null;
+					}
+				},
+				_showTooltip: function() {
+					if (this.options.tooltip_split === false ){
+		            	this._addClass(this.tooltip, 'in');
+			        } else {
+			            this._addClass(this.tooltip_min, 'in');
+			            this._addClass(this.tooltip_max, 'in');
+			        }
+					this.over = true;
+				},
+				_hideTooltip: function() {
+					if (this.inDrag === false && this.alwaysShowTooltip !== true) {
+						this._removeClass(this.tooltip, 'in');
+						this._removeClass(this.tooltip_min, 'in');
+						this._removeClass(this.tooltip_max, 'in');
+					}
+					this.over = false;
+				},
+				_layout: function() {
+					var positionPercentages;
+
+					if(this.options.reversed) {
+						positionPercentages = [ 100 - this.percentage[0], this.percentage[1] ];
+					} else {
+						positionPercentages = [ this.percentage[0], this.percentage[1] ];
+					}
+
+					this.handle1.style[this.stylePos] = positionPercentages[0]+'%';
+					this.handle2.style[this.stylePos] = positionPercentages[1]+'%';
+
+					if (this.options.orientation === 'vertical') {
+						this.trackSelection.style.top = Math.min(positionPercentages[0], positionPercentages[1]) +'%';
+						this.trackSelection.style.height = Math.abs(positionPercentages[0] - positionPercentages[1]) +'%';
+					} else {
+						this.trackSelection.style.left = Math.min(positionPercentages[0], positionPercentages[1]) +'%';
+						this.trackSelection.style.width = Math.abs(positionPercentages[0] - positionPercentages[1]) +'%';
+
+				        var offset_min = this.tooltip_min.getBoundingClientRect();
+				        var offset_max = this.tooltip_max.getBoundingClientRect();
+
+				        if (offset_min.right > offset_max.left) {
+				            this._removeClass(this.tooltip_max, 'top');
+				            this._addClass(this.tooltip_max, 'bottom');
+				            this.tooltip_max.style.top = 18 + 'px';
+				        } else {
+				            this._removeClass(this.tooltip_max, 'bottom');
+				            this._addClass(this.tooltip_max, 'top');
+				            this.tooltip_max.style.top = -30 + 'px';
+				        }
+		 			}
+
+		 			var formattedTooltipVal;
+
+					if (this.options.range) {
+						formattedTooltipVal = this.options.formatter(this.options.value);
+						this._setText(this.tooltipInner, formattedTooltipVal);
+						this.tooltip.style[this.stylePos] = (positionPercentages[1] + positionPercentages[0])/2 + '%';
+
+						if (this.options.orientation === 'vertical') {
+							this._css(this.tooltip, 'margin-top', -this.tooltip.offsetHeight / 2 + 'px');
+						} else {
+							this._css(this.tooltip, 'margin-left', -this.tooltip.offsetWidth / 2 + 'px');
+						}
+
+						if (this.options.orientation === 'vertical') {
+							this._css(this.tooltip, 'margin-top', -this.tooltip.offsetHeight / 2 + 'px');
+						} else {
+							this._css(this.tooltip, 'margin-left', -this.tooltip.offsetWidth / 2 + 'px');
+						}
+
+						var innerTooltipMinText = this.options.formatter(this.options.value[0]);
+						this._setText(this.tooltipInner_min, innerTooltipMinText);
+
+						var innerTooltipMaxText = this.options.formatter(this.options.value[1]);
+						this._setText(this.tooltipInner_max, innerTooltipMaxText);
+
+						this.tooltip_min.style[this.stylePos] = positionPercentages[0] + '%';
+
+						if (this.options.orientation === 'vertical') {
+							this._css(this.tooltip_min, 'margin-top', -this.tooltip_min.offsetHeight / 2 + 'px');
+						} else {
+							this._css(this.tooltip_min, 'margin-left', -this.tooltip_min.offsetWidth / 2 + 'px');
+						}
+
+						this.tooltip_max.style[this.stylePos] = positionPercentages[1] + '%';
+
+						if (this.options.orientation === 'vertical') {
+							this._css(this.tooltip_max, 'margin-top', -this.tooltip_max.offsetHeight / 2 + 'px');
+						} else {
+							this._css(this.tooltip_max, 'margin-left', -this.tooltip_max.offsetWidth / 2 + 'px');
+						}
+					} else {
+						formattedTooltipVal = this.options.formatter(this.options.value[0]);
+						this._setText(this.tooltipInner, formattedTooltipVal);
+
+						this.tooltip.style[this.stylePos] = positionPercentages[0] + '%';
+						if (this.options.orientation === 'vertical') {
+							this._css(this.tooltip, 'margin-top', -this.tooltip.offsetHeight / 2 + 'px');
+						} else {
+							this._css(this.tooltip, 'margin-left', -this.tooltip.offsetWidth / 2 + 'px');
+						}
+					}
+				},
+				_removeProperty: function(element, prop) {
+					if (element.style.removeProperty) {
+					    element.style.removeProperty(prop);
+					} else {
+					    element.style.removeAttribute(prop);
+					}
+				},
+				_mousedown: function(ev) {
+					if(!this.options.enabled) {
+						return false;
+					}
+
+					this._triggerFocusOnHandle();
+
+					this.offset = this._offset(this.sliderElem);
+					this.size = this.sliderElem[this.sizePos];
+
+					var percentage = this._getPercentage(ev);
+
+					if (this.options.range) {
+						var diff1 = Math.abs(this.percentage[0] - percentage);
+						var diff2 = Math.abs(this.percentage[1] - percentage);
+						this.dragged = (diff1 < diff2) ? 0 : 1;
+					} else {
+						this.dragged = 0;
+					}
+
+					this.percentage[this.dragged] = this.options.reversed ? 100 - percentage : percentage;
+					this._layout();
+
+					if (this.touchCapable) {
+						document.removeEventListener("touchmove", this.mousemove, false);
+						document.removeEventListener("touchend", this.mouseup, false);
+					}
+
+					if(this.mousemove){
+						document.removeEventListener("mousemove", this.mousemove, false);
+					}
+					if(this.mouseup){
+						document.removeEventListener("mouseup", this.mouseup, false);
+					}
+
+					this.mousemove = this._mousemove.bind(this);
+					this.mouseup = this._mouseup.bind(this);
+
+					if (this.touchCapable) {
+						// Touch: Bind touch events:
+						document.addEventListener("touchmove", this.mousemove, false);
+						document.addEventListener("touchend", this.mouseup, false);
+					}
+					// Bind mouse events:
+					document.addEventListener("mousemove", this.mousemove, false);
+					document.addEventListener("mouseup", this.mouseup, false);
+
+					this.inDrag = true;
+					var newValue = this._calculateValue();
+
+					this._trigger('slideStart', newValue);
+
+					this._setDataVal(newValue);
+					this.setValue(newValue);
+
+					this._pauseEvent(ev);
+
+					return true;
+				},
+				_triggerFocusOnHandle: function(handleIdx) {
+					if(handleIdx === 0) {
+						this.handle1.focus();
+					}
+					if(handleIdx === 1) {
+						this.handle2.focus();
+					}
+				},
+				_keydown: function(handleIdx, ev) {
+					if(!this.options.enabled) {
+						return false;
+					}
+
+					var dir;
+					switch (ev.keyCode) {
+						case 37: // left
+						case 40: // down
+							dir = -1;
+							break;
+						case 39: // right
+						case 38: // up
+							dir = 1;
+							break;
+					}
+					if (!dir) {
+						return;
+					}
+
+					// use natural arrow keys instead of from min to max
+					if (this.options.natural_arrow_keys) {
+						var ifVerticalAndNotReversed = (this.options.orientation === 'vertical' && !this.options.reversed);
+						var ifHorizontalAndReversed = (this.options.orientation === 'horizontal' && this.options.reversed);
+
+						if (ifVerticalAndNotReversed || ifHorizontalAndReversed) {
+							dir = dir * -1;
+						}
+					}
+
+					var oneStepValuePercentageChange = dir * this.percentage[2];
+					var percentage = this.percentage[handleIdx] + oneStepValuePercentageChange;
+
+					if (percentage > 100) {
+						percentage = 100;
+					} else if (percentage < 0) {
+						percentage = 0;
+					}
+
+					this.dragged = handleIdx;
+					this._adjustPercentageForRangeSliders(percentage);
+					this.percentage[this.dragged] = percentage;
+					this._layout();
+
+					var val = this._calculateValue();
+
+					this._trigger('slideStart', val);
+					this._setDataVal(val);
+					this.setValue(val, true);
+
+					this._trigger('slideStop', val);
+					this._setDataVal(val);
+
+					this._pauseEvent(ev);
+
+					return false;
+				},
+				_pauseEvent: function(ev) {
+					if(ev.stopPropagation) {
+						ev.stopPropagation();
+					}
+				    if(ev.preventDefault) {
+				    	ev.preventDefault();
+				    }
+				    ev.cancelBubble=true;
+				    ev.returnValue=false;
+				},
+				_mousemove: function(ev) {
+					if(!this.options.enabled) {
+						return false;
+					}
+
+					var percentage = this._getPercentage(ev);
+					this._adjustPercentageForRangeSliders(percentage);
+					this.percentage[this.dragged] = this.options.reversed ? 100 - percentage : percentage;
+					this._layout();
+
+					var val = this._calculateValue();
+					this.setValue(val, true);
+
+					return false;
+				},
+				_adjustPercentageForRangeSliders: function(percentage) {
+					if (this.options.range) {
+						if (this.dragged === 0 && this.percentage[1] < percentage) {
+							this.percentage[0] = this.percentage[1];
+							this.dragged = 1;
+						} else if (this.dragged === 1 && this.percentage[0] > percentage) {
+							this.percentage[1] = this.percentage[0];
+							this.dragged = 0;
+						}
+					}
+				},
+				_mouseup: function() {
+					if(!this.options.enabled) {
+						return false;
+					}
+					if (this.touchCapable) {
+						// Touch: Unbind touch event handlers:
+						document.removeEventListener("touchmove", this.mousemove, false);
+						document.removeEventListener("touchend", this.mouseup, false);
+					}
+	                // Unbind mouse event handlers:
+	                document.removeEventListener("mousemove", this.mousemove, false);
+	                document.removeEventListener("mouseup", this.mouseup, false);
+
+					this.inDrag = false;
+					if (this.over === false) {
+						this._hideTooltip();
+					}
+					var val = this._calculateValue();
+
+					this._layout();
+					this._trigger('slideStop', val);
+					this._setDataVal(val);
+
+					return false;
+				},
+				_calculateValue: function() {
+					var val;
+					if (this.options.range) {
+						val = [this.options.min,this.options.max];
+				        if (this.percentage[0] !== 0){
+				            val[0] = (Math.max(this.options.min, this.options.min + Math.round((this.diff * this.percentage[0]/100)/this.options.step)*this.options.step));
+				            val[0] = this._applyPrecision(val[0]);
+				        }
+				        if (this.percentage[1] !== 100){
+				            val[1] = (Math.min(this.options.max, this.options.min + Math.round((this.diff * this.percentage[1]/100)/this.options.step)*this.options.step));
+				            val[1] = this._applyPrecision(val[1]);
+				        }
+					} else {
+						val = (this.options.min + Math.round((this.diff * this.percentage[0]/100)/this.options.step)*this.options.step);
+						if (val < this.options.min) {
+							val = this.options.min;
+						}
+						else if (val > this.options.max) {
+							val = this.options.max;
+						}
+						val = parseFloat(val);
+						val = this._applyPrecision(val);
+					}
+					return val;
+				},
+				_applyPrecision: function(val) {
+					var precision = this.options.precision || this._getNumDigitsAfterDecimalPlace(this.options.step);
+					return this._applyToFixedAndParseFloat(val, precision);
+				},
+				_getNumDigitsAfterDecimalPlace: function(num) {
+					var match = (''+num).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
+					if (!match) { return 0; }
+					return Math.max(0, (match[1] ? match[1].length : 0) - (match[2] ? +match[2] : 0));
+				},
+				_applyToFixedAndParseFloat: function(num, toFixedInput) {
+					var truncatedNum = num.toFixed(toFixedInput);
+					return parseFloat(truncatedNum);
+				},
+				/*
+					Credits to Mike Samuel for the following method!
+					Source: http://stackoverflow.com/questions/10454518/javascript-how-to-retrieve-the-number-of-decimals-of-a-string-number
+				*/
+				_getPercentage: function(ev) {
+					if (this.touchCapable && (ev.type === 'touchstart' || ev.type === 'touchmove')) {
+						ev = ev.touches[0];
+					}
+					var percentage = (ev[this.mousePos] - this.offset[this.stylePos])*100/this.size;
+					percentage = Math.round(percentage/this.percentage[2])*this.percentage[2];
+					return Math.max(0, Math.min(100, percentage));
+				},
+				_validateInputValue: function(val) {
+					if(typeof val === 'number') {
+						return val;
+					} else if(val instanceof Array) {
+						this._validateArray(val);
+						return val;
+					} else {
+						throw new Error( ErrorMsgs.formatInvalidInputErrorMsg(val) );
+					}
+				},
+				_validateArray: function(val) {
+					for(var i = 0; i < val.length; i++) {
+						var input =  val[i];
+						if (typeof input !== 'number') { throw new Error( ErrorMsgs.formatInvalidInputErrorMsg(input) ); }
+					}
+				},
+				_setDataVal: function(val) {
+					var value = "value: '" + val + "'";
+					this.element.setAttribute('data', value);
+					this.element.setAttribute('value', val);
+				},
+				_trigger: function(evt, val) {
+					val = (val || val === 0) ? val : undefined;
+
+					var callbackFnArray = this.eventToCallbackMap[evt];
+					if(callbackFnArray && callbackFnArray.length) {
+						for(var i = 0; i < callbackFnArray.length; i++) {
+							var callbackFn = callbackFnArray[i];
+							callbackFn(val);
+						}
+					}
+
+					/* If JQuery exists, trigger JQuery events */
+					if($) {
+						this._triggerJQueryEvent(evt, val);
+					}
+				},
+				_triggerJQueryEvent: function(evt, val) {
+					var eventData = {
+						type: evt,
+						value: val
+					};
+					this.$element.trigger(eventData);
+					this.$sliderElem.trigger(eventData);
+				},
+				_unbindJQueryEventHandlers: function() {
+					this.$element.off();
+					this.$sliderElem.off();
+				},
+				_setText: function(element, text) {
+					if(typeof element.innerText !== "undefined") {
+				 		element.innerText = text;
+				 	} else if(typeof element.textContent !== "undefined") {
+				 		element.textContent = text;
+				 	}
+				},
+				_removeClass: function(element, classString) {
+					var classes = classString.split(" ");
+					var newClasses = element.className;
+
+					for(var i = 0; i < classes.length; i++) {
+						var classTag = classes[i];
+						var regex = new RegExp("(?:\\s|^)" + classTag + "(?:\\s|$)");
+						newClasses = newClasses.replace(regex, " ");
+					}
+
+					element.className = newClasses.trim();
+				},
+				_addClass: function(element, classString) {
+					var classes = classString.split(" ");
+					var newClasses = element.className;
+
+					for(var i = 0; i < classes.length; i++) {
+						var classTag = classes[i];
+						var regex = new RegExp("(?:\\s|^)" + classTag + "(?:\\s|$)");
+						var ifClassExists = regex.test(newClasses);
+
+						if(!ifClassExists) {
+							newClasses += " " + classTag;
+						}
+					}
+
+					element.className = newClasses.trim();
+				},
+				_offset: function (obj) {
+					var ol = 0;
+					var ot = 0;
+					if (obj.offsetParent) {
+						do {
+						  ol += obj.offsetLeft;
+						  ot += obj.offsetTop;
+						} while (obj = obj.offsetParent);
+					}
+					return {
+						left: ol,
+						top: ot
+					};
+				},
+				_css: function(elementRef, styleName, value) {
+	                if ($) {
+	                    $.style(elementRef, styleName, value);
+	                } else {
+	                    var style = styleName.replace(/^-ms-/, "ms-").replace(/-([\da-z])/gi, function (all, letter) {
+	                        return letter.toUpperCase();
+	                    });
+	                    elementRef.style[style] = value;
+	                }
+				}
+			};
+
+			/*********************************
+
+				Attach to global namespace
+
+			*********************************/
+			if($) {
+				var namespace = $.fn.slider ? 'bootstrapSlider' : 'slider';
+				$.bridget(namespace, Slider);
+			}
+
+		})( $ );
+
+		return Slider;
+	}));
+
+/***/ },
+/* 4 */
 /***/ function(module, exports, __webpack_require__) {
 
 	var __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*!
@@ -9342,1215 +10560,6 @@
 
 
 /***/ },
-/* 4 */
-/***/ function(module, exports, __webpack_require__) {
-
-	var __WEBPACK_AMD_DEFINE_FACTORY__, __WEBPACK_AMD_DEFINE_ARRAY__, __WEBPACK_AMD_DEFINE_RESULT__;/*! =========================================================
-	 * bootstrap-slider.js
-	 *
-	 * Maintainers:
-	 *		Kyle Kemp
-	 *			- Twitter: @seiyria
-	 *			- Github:  seiyria
-	 *		Rohit Kalkur
-	 *			- Twitter: @Rovolutionary
-	 *			- Github:  rovolution
-	 *
-	 * =========================================================
-	 *
-	 * Licensed under the Apache License, Version 2.0 (the "License");
-	 * you may not use this file except in compliance with the License.
-	 * You may obtain a copy of the License at
-	 *
-	 * http://www.apache.org/licenses/LICENSE-2.0
-	 *
-	 * Unless required by applicable law or agreed to in writing, software
-	 * distributed under the License is distributed on an "AS IS" BASIS,
-	 * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-	 * See the License for the specific language governing permissions and
-	 * limitations under the License.
-	 * ========================================================= */
-
-
-	/**
-	 * Bridget makes jQuery widgets
-	 * v1.0.1
-	 * MIT license
-	 */
-
-	(function(root, factory) {
-		if(true) {
-			!(__WEBPACK_AMD_DEFINE_ARRAY__ = [__webpack_require__(3)], __WEBPACK_AMD_DEFINE_FACTORY__ = (factory), __WEBPACK_AMD_DEFINE_RESULT__ = (typeof __WEBPACK_AMD_DEFINE_FACTORY__ === 'function' ? (__WEBPACK_AMD_DEFINE_FACTORY__.apply(exports, __WEBPACK_AMD_DEFINE_ARRAY__)) : __WEBPACK_AMD_DEFINE_FACTORY__), __WEBPACK_AMD_DEFINE_RESULT__ !== undefined && (module.exports = __WEBPACK_AMD_DEFINE_RESULT__));
-		} else if(typeof module === "object" && module.exports) {
-			var jQuery;
-			try {
-				jQuery = require("jquery");
-			} catch (err) {
-				jQuery = null;
-			}
-			module.exports = factory(jQuery);
-		} else {
-			root.Slider = factory(root.jQuery);
-		}
-	}(this, function($) {
-		// Reference to Slider constructor
-		var Slider;
-
-
-		(function( $ ) {
-
-			'use strict';
-
-			// -------------------------- utils -------------------------- //
-
-			var slice = Array.prototype.slice;
-
-			function noop() {}
-
-			// -------------------------- definition -------------------------- //
-
-			function defineBridget( $ ) {
-
-				// bail if no jQuery
-				if ( !$ ) {
-					return;
-				}
-
-				// -------------------------- addOptionMethod -------------------------- //
-
-				/**
-				 * adds option method -> $().plugin('option', {...})
-				 * @param {Function} PluginClass - constructor class
-				 */
-				function addOptionMethod( PluginClass ) {
-					// don't overwrite original option method
-					if ( PluginClass.prototype.option ) {
-						return;
-					}
-
-				  // option setter
-				  PluginClass.prototype.option = function( opts ) {
-				    // bail out if not an object
-				    if ( !$.isPlainObject( opts ) ){
-				      return;
-				    }
-				    this.options = $.extend( true, this.options, opts );
-				  };
-				}
-
-
-				// -------------------------- plugin bridge -------------------------- //
-
-				// helper function for logging errors
-				// $.error breaks jQuery chaining
-				var logError = typeof console === 'undefined' ? noop :
-				  function( message ) {
-				    console.error( message );
-				  };
-
-				/**
-				 * jQuery plugin bridge, access methods like $elem.plugin('method')
-				 * @param {String} namespace - plugin name
-				 * @param {Function} PluginClass - constructor class
-				 */
-				function bridge( namespace, PluginClass ) {
-				  // add to jQuery fn namespace
-				  $.fn[ namespace ] = function( options ) {
-				    if ( typeof options === 'string' ) {
-				      // call plugin method when first argument is a string
-				      // get arguments for method
-				      var args = slice.call( arguments, 1 );
-
-				      for ( var i=0, len = this.length; i < len; i++ ) {
-				        var elem = this[i];
-				        var instance = $.data( elem, namespace );
-				        if ( !instance ) {
-				          logError( "cannot call methods on " + namespace + " prior to initialization; " +
-				            "attempted to call '" + options + "'" );
-				          continue;
-				        }
-				        if ( !$.isFunction( instance[options] ) || options.charAt(0) === '_' ) {
-				          logError( "no such method '" + options + "' for " + namespace + " instance" );
-				          continue;
-				        }
-
-				        // trigger method with arguments
-				        var returnValue = instance[ options ].apply( instance, args);
-
-				        // break look and return first value if provided
-				        if ( returnValue !== undefined && returnValue !== instance) {
-				          return returnValue;
-				        }
-				      }
-				      // return this if no return value
-				      return this;
-				    } else {
-				      var objects = this.map( function() {
-				        var instance = $.data( this, namespace );
-				        if ( instance ) {
-				          // apply options & init
-				          instance.option( options );
-				          instance._init();
-				        } else {
-				          // initialize new instance
-				          instance = new PluginClass( this, options );
-				          $.data( this, namespace, instance );
-				        }
-				        return $(this);
-				      });
-
-				      if(!objects || objects.length > 1) {
-				      	return objects;
-				      } else {
-				      	return objects[0];
-				      }
-				    }
-				  };
-
-				}
-
-				// -------------------------- bridget -------------------------- //
-
-				/**
-				 * converts a Prototypical class into a proper jQuery plugin
-				 *   the class must have a ._init method
-				 * @param {String} namespace - plugin name, used in $().pluginName
-				 * @param {Function} PluginClass - constructor class
-				 */
-				$.bridget = function( namespace, PluginClass ) {
-				  addOptionMethod( PluginClass );
-				  bridge( namespace, PluginClass );
-				};
-
-				return $.bridget;
-
-			}
-
-		  	// get jquery from browser global
-		  	defineBridget( $ );
-
-		})( $ );
-
-
-		/*************************************************
-
-				BOOTSTRAP-SLIDER SOURCE CODE
-
-		**************************************************/
-
-		(function($) {
-
-			var ErrorMsgs = {
-				formatInvalidInputErrorMsg : function(input) {
-					return "Invalid input value '" + input + "' passed in";
-				},
-				callingContextNotSliderInstance : "Calling context element does not have instance of Slider bound to it. Check your code to make sure the JQuery object returned from the call to the slider() initializer is calling the method"
-			};
-
-
-
-			/*************************************************
-
-								CONSTRUCTOR
-
-			**************************************************/
-			Slider = function(element, options) {
-				createNewSlider.call(this, element, options);
-				return this;
-			};
-
-			function createNewSlider(element, options) {
-				/*************************************************
-
-								Create Markup
-
-				**************************************************/
-				if(typeof element === "string") {
-					this.element = document.querySelector(element);
-				} else if(element instanceof HTMLElement) {
-					this.element = element;
-				}
-
-				var origWidth = this.element.style.width;
-				var updateSlider = false;
-				var parent = this.element.parentNode;
-				var sliderTrackSelection;
-				var sliderMinHandle;
-				var sliderMaxHandle;
-
-				if (this.sliderElem) {
-					updateSlider = true;
-				} else {
-					/* Create elements needed for slider */
-					this.sliderElem = document.createElement("div");
-					this.sliderElem.className = "slider";
-
-					/* Create slider track elements */
-					var sliderTrack = document.createElement("div");
-					sliderTrack.className = "slider-track";
-
-					sliderTrackSelection = document.createElement("div");
-					sliderTrackSelection.className = "slider-selection";
-
-					sliderMinHandle = document.createElement("div");
-					sliderMinHandle.className = "slider-handle min-slider-handle";
-
-					sliderMaxHandle = document.createElement("div");
-					sliderMaxHandle.className = "slider-handle max-slider-handle";
-
-					sliderTrack.appendChild(sliderTrackSelection);
-					sliderTrack.appendChild(sliderMinHandle);
-					sliderTrack.appendChild(sliderMaxHandle);
-
-					var createAndAppendTooltipSubElements = function(tooltipElem) {
-						var arrow = document.createElement("div");
-						arrow.className = "tooltip-arrow";
-
-						var inner = document.createElement("div");
-						inner.className = "tooltip-inner";
-
-						tooltipElem.appendChild(arrow);
-						tooltipElem.appendChild(inner);
-					};
-
-					/* Create tooltip elements */
-					var sliderTooltip = document.createElement("div");
-					sliderTooltip.className = "tooltip tooltip-main";
-					createAndAppendTooltipSubElements(sliderTooltip);
-
-					var sliderTooltipMin = document.createElement("div");
-					sliderTooltipMin.className = "tooltip tooltip-min";
-					createAndAppendTooltipSubElements(sliderTooltipMin);
-
-					var sliderTooltipMax = document.createElement("div");
-					sliderTooltipMax.className = "tooltip tooltip-max";
-					createAndAppendTooltipSubElements(sliderTooltipMax);
-
-
-					/* Append components to sliderElem */
-					this.sliderElem.appendChild(sliderTrack);
-					this.sliderElem.appendChild(sliderTooltip);
-					this.sliderElem.appendChild(sliderTooltipMin);
-					this.sliderElem.appendChild(sliderTooltipMax);
-
-					/* Append slider element to parent container, right before the original <input> element */
-					parent.insertBefore(this.sliderElem, this.element);
-
-					/* Hide original <input> element */
-					this.element.style.display = "none";
-				}
-				/* If JQuery exists, cache JQ references */
-				if($) {
-					this.$element = $(this.element);
-					this.$sliderElem = $(this.sliderElem);
-				}
-
-				/*************************************************
-
-								Process Options
-
-				**************************************************/
-				options = options ? options : {};
-				var optionTypes = Object.keys(this.defaultOptions);
-
-				for(var i = 0; i < optionTypes.length; i++) {
-					var optName = optionTypes[i];
-
-					// First check if an option was passed in via the constructor
-					var val = options[optName];
-					// If no data attrib, then check data atrributes
-					val = (typeof val !== 'undefined') ? val : getDataAttrib(this.element, optName);
-					// Finally, if nothing was specified, use the defaults
-					val = (val !== null) ? val : this.defaultOptions[optName];
-
-					// Set all options on the instance of the Slider
-					if(!this.options) {
-						this.options = {};
-					}
-					this.options[optName] = val;
-				}
-
-				function getDataAttrib(element, optName) {
-					var dataName = "data-slider-" + optName;
-					var dataValString = element.getAttribute(dataName);
-
-					try {
-						return JSON.parse(dataValString);
-					}
-					catch(err) {
-						return dataValString;
-					}
-				}
-
-				/*************************************************
-
-									Setup
-
-				**************************************************/
-				this.eventToCallbackMap = {};
-				this.sliderElem.id = this.options.id;
-
-				this.touchCapable = 'ontouchstart' in window || (window.DocumentTouch && document instanceof window.DocumentTouch);
-
-				this.tooltip = this.sliderElem.querySelector('.tooltip-main');
-				this.tooltipInner = this.tooltip.querySelector('.tooltip-inner');
-
-				this.tooltip_min = this.sliderElem.querySelector('.tooltip-min');
-				this.tooltipInner_min = this.tooltip_min.querySelector('.tooltip-inner');
-
-				this.tooltip_max = this.sliderElem.querySelector('.tooltip-max');
-				this.tooltipInner_max= this.tooltip_max.querySelector('.tooltip-inner');
-
-				if (updateSlider === true) {
-					// Reset classes
-					this._removeClass(this.sliderElem, 'slider-horizontal');
-					this._removeClass(this.sliderElem, 'slider-vertical');
-					this._removeClass(this.tooltip, 'hide');
-					this._removeClass(this.tooltip_min, 'hide');
-					this._removeClass(this.tooltip_max, 'hide');
-
-					// Undo existing inline styles for track
-					["left", "top", "width", "height"].forEach(function(prop) {
-						this._removeProperty(this.trackSelection, prop);
-					}, this);
-
-					// Undo inline styles on handles
-					[this.handle1, this.handle2].forEach(function(handle) {
-						this._removeProperty(handle, 'left');
-						this._removeProperty(handle, 'top');
-					}, this);
-
-					// Undo inline styles and classes on tooltips
-					[this.tooltip, this.tooltip_min, this.tooltip_max].forEach(function(tooltip) {
-						this._removeProperty(tooltip, 'left');
-						this._removeProperty(tooltip, 'top');
-						this._removeProperty(tooltip, 'margin-left');
-						this._removeProperty(tooltip, 'margin-top');
-
-						this._removeClass(tooltip, 'right');
-						this._removeClass(tooltip, 'top');
-					}, this);
-				}
-
-				if(this.options.orientation === 'vertical') {
-					this._addClass(this.sliderElem,'slider-vertical');
-
-					this.stylePos = 'top';
-					this.mousePos = 'pageY';
-					this.sizePos = 'offsetHeight';
-
-					this._addClass(this.tooltip, 'right');
-					this.tooltip.style.left = '100%';
-
-					this._addClass(this.tooltip_min, 'right');
-					this.tooltip_min.style.left = '100%';
-
-					this._addClass(this.tooltip_max, 'right');
-					this.tooltip_max.style.left = '100%';
-				} else {
-					this._addClass(this.sliderElem, 'slider-horizontal');
-					this.sliderElem.style.width = origWidth;
-
-					this.options.orientation = 'horizontal';
-					this.stylePos = 'left';
-					this.mousePos = 'pageX';
-					this.sizePos = 'offsetWidth';
-
-					this._addClass(this.tooltip, 'top');
-					this.tooltip.style.top = -this.tooltip.outerHeight - 14 + 'px';
-
-					this._addClass(this.tooltip_min, 'top');
-					this.tooltip_min.style.top = -this.tooltip_min.outerHeight - 14 + 'px';
-
-					this._addClass(this.tooltip_max, 'top');
-					this.tooltip_max.style.top = -this.tooltip_max.outerHeight - 14 + 'px';
-				}
-
-				if (this.options.value instanceof Array) {
-					this.options.range = true;
-				} else if (this.options.range) {
-					// User wants a range, but value is not an array
-					this.options.value = [this.options.value, this.options.max];
-				}
-
-				this.trackSelection = sliderTrackSelection || this.trackSelection;
-				if (this.options.selection === 'none') {
-					this._addClass(this.trackSelection, 'hide');
-				}
-
-				this.handle1 = sliderMinHandle || this.handle1;
-				this.handle2 = sliderMaxHandle || this.handle2;
-
-				if (updateSlider === true) {
-					// Reset classes
-					this._removeClass(this.handle1, 'round triangle');
-					this._removeClass(this.handle2, 'round triangle hide');
-				}
-
-				var availableHandleModifiers = ['round', 'triangle', 'custom'];
-				var isValidHandleType = availableHandleModifiers.indexOf(this.options.handle) !== -1;
-				if (isValidHandleType) {
-					this._addClass(this.handle1, this.options.handle);
-					this._addClass(this.handle2, this.options.handle);
-				}
-
-				this.offset = this._offset(this.sliderElem);
-				this.size = this.sliderElem[this.sizePos];
-				this.setValue(this.options.value);
-
-				/******************************************
-
-							Bind Event Listeners
-
-				******************************************/
-
-				// Bind keyboard handlers
-				this.handle1Keydown = this._keydown.bind(this, 0);
-				this.handle1.addEventListener("keydown", this.handle1Keydown, false);
-
-				this.handle2Keydown = this._keydown.bind(this, 1);
-				this.handle2.addEventListener("keydown", this.handle2Keydown, false);
-
-				if (this.touchCapable) {
-					// Bind touch handlers
-					this.mousedown = this._mousedown.bind(this);
-					this.sliderElem.addEventListener("touchstart", this.mousedown, false);
-				} else {
-					// Bind mouse handlers
-					this.mousedown = this._mousedown.bind(this);
-					this.sliderElem.addEventListener("mousedown", this.mousedown, false);
-				}
-
-				// Bind tooltip-related handlers
-				if(this.options.tooltip === 'hide') {
-					this._addClass(this.tooltip, 'hide');
-					this._addClass(this.tooltip_min, 'hide');
-					this._addClass(this.tooltip_max, 'hide');
-				} else if(this.options.tooltip === 'always') {
-					this._showTooltip();
-					this._alwaysShowTooltip = true;
-				} else {
-					this.showTooltip = this._showTooltip.bind(this);
-					this.hideTooltip = this._hideTooltip.bind(this);
-
-					this.sliderElem.addEventListener("mouseenter", this.showTooltip, false);
-					this.sliderElem.addEventListener("mouseleave", this.hideTooltip, false);
-
-					this.handle1.addEventListener("focus", this.showTooltip, false);
-					this.handle1.addEventListener("blur", this.hideTooltip, false);
-
-					this.handle2.addEventListener("focus", this.showTooltip, false);
-					this.handle2.addEventListener("blur", this.hideTooltip, false);
-				}
-
-				if(this.options.enabled) {
-					this.enable();
-				} else {
-					this.disable();
-				}
-			}
-
-			/*************************************************
-
-						INSTANCE PROPERTIES/METHODS
-
-			- Any methods bound to the prototype are considered
-			part of the plugin's `public` interface
-
-			**************************************************/
-			Slider.prototype = {
-				_init: function() {}, // NOTE: Must exist to support bridget
-
-				constructor: Slider,
-
-				defaultOptions: {
-					id: "",
-				  	min: 0,
-					max: 10,
-					step: 1,
-					precision: 0,
-					orientation: 'horizontal',
-					value: 5,
-					range: false,
-					selection: 'before',
-					tooltip: 'show',
-					tooltip_split: false,
-					handle: 'round',
-					reversed: false,
-					enabled: true,
-					formatter: function(val) {
-						if(val instanceof Array) {
-							return val[0] + " : " + val[1];
-						} else {
-							return val;
-						}
-					},
-					natural_arrow_keys: false
-				},
-
-				over: false,
-
-				inDrag: false,
-
-				getValue: function() {
-					if (this.options.range) {
-						return this.options.value;
-					}
-					return this.options.value[0];
-				},
-
-				setValue: function(val, triggerSlideEvent) {
-					if (!val) {
-						val = 0;
-					}
-					var oldValue = this.getValue();
-					this.options.value = this._validateInputValue(val);
-					var applyPrecision = this._applyPrecision.bind(this);
-
-					if (this.options.range) {
-						this.options.value[0] = applyPrecision(this.options.value[0]);
-						this.options.value[1] = applyPrecision(this.options.value[1]);
-
-						this.options.value[0] = Math.max(this.options.min, Math.min(this.options.max, this.options.value[0]));
-						this.options.value[1] = Math.max(this.options.min, Math.min(this.options.max, this.options.value[1]));
-					} else {
-						this.options.value = applyPrecision(this.options.value);
-						this.options.value = [ Math.max(this.options.min, Math.min(this.options.max, this.options.value))];
-						this._addClass(this.handle2, 'hide');
-						if (this.options.selection === 'after') {
-							this.options.value[1] = this.options.max;
-						} else {
-							this.options.value[1] = this.options.min;
-						}
-					}
-
-					this.diff = this.options.max - this.options.min;
-					if (this.diff > 0) {
-						this.percentage = [
-							(this.options.value[0] - this.options.min) * 100 / this.diff,
-							(this.options.value[1] - this.options.min) * 100 / this.diff,
-							this.options.step * 100 / this.diff
-						];
-					} else {
-						this.percentage = [0, 0, 100];
-					}
-
-					this._layout();
-					var newValue = this.options.range ? this.options.value : this.options.value[0];
-
-					if(triggerSlideEvent === true) {
-						this._trigger('slide', newValue);
-					}
-					if(oldValue !== newValue) {
-						this._trigger('change', {
-							oldValue: oldValue,
-							newValue: newValue
-						});
-					}
-					this._setDataVal(newValue);
-
-					return this;
-				},
-
-				destroy: function(){
-					// Remove event handlers on slider elements
-					this._removeSliderEventHandlers();
-
-					// Remove the slider from the DOM
-					this.sliderElem.parentNode.removeChild(this.sliderElem);
-					/* Show original <input> element */
-					this.element.style.display = "";
-
-					// Clear out custom event bindings
-					this._cleanUpEventCallbacksMap();
-
-					// Remove data values
-					this.element.removeAttribute("data");
-
-					// Remove JQuery handlers/data
-					if($) {
-						this._unbindJQueryEventHandlers();
-						this.$element.removeData('slider');
-					}
-				},
-
-				disable: function() {
-					this.options.enabled = false;
-					this.handle1.removeAttribute("tabindex");
-					this.handle2.removeAttribute("tabindex");
-					this._addClass(this.sliderElem, 'slider-disabled');
-					this._trigger('slideDisabled');
-
-					return this;
-				},
-
-				enable: function() {
-					this.options.enabled = true;
-					this.handle1.setAttribute("tabindex", 0);
-					this.handle2.setAttribute("tabindex", 0);
-					this._removeClass(this.sliderElem, 'slider-disabled');
-					this._trigger('slideEnabled');
-
-					return this;
-				},
-
-				toggle: function() {
-					if(this.options.enabled) {
-						this.disable();
-					} else {
-						this.enable();
-					}
-
-					return this;
-				},
-
-				isEnabled: function() {
-					return this.options.enabled;
-				},
-
-				on: function(evt, callback) {
-					if($) {
-						this.$element.on(evt, callback);
-						this.$sliderElem.on(evt, callback);
-					} else {
-						this._bindNonQueryEventHandler(evt, callback);
-					}
-					return this;
-				},
-
-				getAttribute: function(attribute) {
-					if(attribute) {
-						return this.options[attribute];
-					} else {
-						return this.options;
-					}
-				},
-
-				setAttribute: function(attribute, value) {
-					this.options[attribute] = value;
-					return this;
-				},
-
-				refresh: function() {
-					this._removeSliderEventHandlers();
-					createNewSlider.call(this, this.element, this.options);
-					if($) {
-						// Bind new instance of slider to the element
-						$.data(this.element, 'slider', this);
-					}
-					return this;
-				},
-
-				/******************************+
-
-							HELPERS
-
-				- Any method that is not part of the public interface.
-				- Place it underneath this comment block and write its signature like so:
-
-				  					_fnName : function() {...}
-
-				********************************/
-				_removeSliderEventHandlers: function() {
-					// Remove event listeners from handle1
-					this.handle1.removeEventListener("keydown", this.handle1Keydown, false);
-					this.handle1.removeEventListener("focus", this.showTooltip, false);
-					this.handle1.removeEventListener("blur", this.hideTooltip, false);
-
-					// Remove event listeners from handle2
-					this.handle2.removeEventListener("keydown", this.handle2Keydown, false);
-					this.handle2.removeEventListener("focus", this.handle2Keydown, false);
-					this.handle2.removeEventListener("blur", this.handle2Keydown, false);
-
-					// Remove event listeners from sliderElem
-					this.sliderElem.removeEventListener("mouseenter", this.showTooltip, false);
-					this.sliderElem.removeEventListener("mouseleave", this.hideTooltip, false);
-					this.sliderElem.removeEventListener("touchstart", this.mousedown, false);
-					this.sliderElem.removeEventListener("mousedown", this.mousedown, false);
-				},
-				_bindNonQueryEventHandler: function(evt, callback) {
-					if(this.eventToCallbackMap[evt]===undefined) {
-						this.eventToCallbackMap[evt] = [];
-					}
-					this.eventToCallbackMap[evt].push(callback);
-				},
-				_cleanUpEventCallbacksMap: function() {
-					var eventNames = Object.keys(this.eventToCallbackMap);
-					for(var i = 0; i < eventNames.length; i++) {
-						var eventName = eventNames[i];
-						this.eventToCallbackMap[eventName] = null;
-					}
-				},
-				_showTooltip: function() {
-					if (this.options.tooltip_split === false ){
-		            	this._addClass(this.tooltip, 'in');
-			        } else {
-			            this._addClass(this.tooltip_min, 'in');
-			            this._addClass(this.tooltip_max, 'in');
-			        }
-					this.over = true;
-				},
-				_hideTooltip: function() {
-					if (this.inDrag === false && this.alwaysShowTooltip !== true) {
-						this._removeClass(this.tooltip, 'in');
-						this._removeClass(this.tooltip_min, 'in');
-						this._removeClass(this.tooltip_max, 'in');
-					}
-					this.over = false;
-				},
-				_layout: function() {
-					var positionPercentages;
-
-					if(this.options.reversed) {
-						positionPercentages = [ 100 - this.percentage[0], this.percentage[1] ];
-					} else {
-						positionPercentages = [ this.percentage[0], this.percentage[1] ];
-					}
-
-					this.handle1.style[this.stylePos] = positionPercentages[0]+'%';
-					this.handle2.style[this.stylePos] = positionPercentages[1]+'%';
-
-					if (this.options.orientation === 'vertical') {
-						this.trackSelection.style.top = Math.min(positionPercentages[0], positionPercentages[1]) +'%';
-						this.trackSelection.style.height = Math.abs(positionPercentages[0] - positionPercentages[1]) +'%';
-					} else {
-						this.trackSelection.style.left = Math.min(positionPercentages[0], positionPercentages[1]) +'%';
-						this.trackSelection.style.width = Math.abs(positionPercentages[0] - positionPercentages[1]) +'%';
-
-				        var offset_min = this.tooltip_min.getBoundingClientRect();
-				        var offset_max = this.tooltip_max.getBoundingClientRect();
-
-				        if (offset_min.right > offset_max.left) {
-				            this._removeClass(this.tooltip_max, 'top');
-				            this._addClass(this.tooltip_max, 'bottom');
-				            this.tooltip_max.style.top = 18 + 'px';
-				        } else {
-				            this._removeClass(this.tooltip_max, 'bottom');
-				            this._addClass(this.tooltip_max, 'top');
-				            this.tooltip_max.style.top = -30 + 'px';
-				        }
-		 			}
-
-		 			var formattedTooltipVal;
-
-					if (this.options.range) {
-						formattedTooltipVal = this.options.formatter(this.options.value);
-						this._setText(this.tooltipInner, formattedTooltipVal);
-						this.tooltip.style[this.stylePos] = (positionPercentages[1] + positionPercentages[0])/2 + '%';
-
-						if (this.options.orientation === 'vertical') {
-							this._css(this.tooltip, 'margin-top', -this.tooltip.offsetHeight / 2 + 'px');
-						} else {
-							this._css(this.tooltip, 'margin-left', -this.tooltip.offsetWidth / 2 + 'px');
-						}
-
-						if (this.options.orientation === 'vertical') {
-							this._css(this.tooltip, 'margin-top', -this.tooltip.offsetHeight / 2 + 'px');
-						} else {
-							this._css(this.tooltip, 'margin-left', -this.tooltip.offsetWidth / 2 + 'px');
-						}
-
-						var innerTooltipMinText = this.options.formatter(this.options.value[0]);
-						this._setText(this.tooltipInner_min, innerTooltipMinText);
-
-						var innerTooltipMaxText = this.options.formatter(this.options.value[1]);
-						this._setText(this.tooltipInner_max, innerTooltipMaxText);
-
-						this.tooltip_min.style[this.stylePos] = positionPercentages[0] + '%';
-
-						if (this.options.orientation === 'vertical') {
-							this._css(this.tooltip_min, 'margin-top', -this.tooltip_min.offsetHeight / 2 + 'px');
-						} else {
-							this._css(this.tooltip_min, 'margin-left', -this.tooltip_min.offsetWidth / 2 + 'px');
-						}
-
-						this.tooltip_max.style[this.stylePos] = positionPercentages[1] + '%';
-
-						if (this.options.orientation === 'vertical') {
-							this._css(this.tooltip_max, 'margin-top', -this.tooltip_max.offsetHeight / 2 + 'px');
-						} else {
-							this._css(this.tooltip_max, 'margin-left', -this.tooltip_max.offsetWidth / 2 + 'px');
-						}
-					} else {
-						formattedTooltipVal = this.options.formatter(this.options.value[0]);
-						this._setText(this.tooltipInner, formattedTooltipVal);
-
-						this.tooltip.style[this.stylePos] = positionPercentages[0] + '%';
-						if (this.options.orientation === 'vertical') {
-							this._css(this.tooltip, 'margin-top', -this.tooltip.offsetHeight / 2 + 'px');
-						} else {
-							this._css(this.tooltip, 'margin-left', -this.tooltip.offsetWidth / 2 + 'px');
-						}
-					}
-				},
-				_removeProperty: function(element, prop) {
-					if (element.style.removeProperty) {
-					    element.style.removeProperty(prop);
-					} else {
-					    element.style.removeAttribute(prop);
-					}
-				},
-				_mousedown: function(ev) {
-					if(!this.options.enabled) {
-						return false;
-					}
-
-					this._triggerFocusOnHandle();
-
-					this.offset = this._offset(this.sliderElem);
-					this.size = this.sliderElem[this.sizePos];
-
-					var percentage = this._getPercentage(ev);
-
-					if (this.options.range) {
-						var diff1 = Math.abs(this.percentage[0] - percentage);
-						var diff2 = Math.abs(this.percentage[1] - percentage);
-						this.dragged = (diff1 < diff2) ? 0 : 1;
-					} else {
-						this.dragged = 0;
-					}
-
-					this.percentage[this.dragged] = this.options.reversed ? 100 - percentage : percentage;
-					this._layout();
-
-					if (this.touchCapable) {
-						document.removeEventListener("touchmove", this.mousemove, false);
-						document.removeEventListener("touchend", this.mouseup, false);
-					}
-
-					if(this.mousemove){
-						document.removeEventListener("mousemove", this.mousemove, false);
-					}
-					if(this.mouseup){
-						document.removeEventListener("mouseup", this.mouseup, false);
-					}
-
-					this.mousemove = this._mousemove.bind(this);
-					this.mouseup = this._mouseup.bind(this);
-
-					if (this.touchCapable) {
-						// Touch: Bind touch events:
-						document.addEventListener("touchmove", this.mousemove, false);
-						document.addEventListener("touchend", this.mouseup, false);
-					}
-					// Bind mouse events:
-					document.addEventListener("mousemove", this.mousemove, false);
-					document.addEventListener("mouseup", this.mouseup, false);
-
-					this.inDrag = true;
-					var newValue = this._calculateValue();
-
-					this._trigger('slideStart', newValue);
-
-					this._setDataVal(newValue);
-					this.setValue(newValue);
-
-					this._pauseEvent(ev);
-
-					return true;
-				},
-				_triggerFocusOnHandle: function(handleIdx) {
-					if(handleIdx === 0) {
-						this.handle1.focus();
-					}
-					if(handleIdx === 1) {
-						this.handle2.focus();
-					}
-				},
-				_keydown: function(handleIdx, ev) {
-					if(!this.options.enabled) {
-						return false;
-					}
-
-					var dir;
-					switch (ev.keyCode) {
-						case 37: // left
-						case 40: // down
-							dir = -1;
-							break;
-						case 39: // right
-						case 38: // up
-							dir = 1;
-							break;
-					}
-					if (!dir) {
-						return;
-					}
-
-					// use natural arrow keys instead of from min to max
-					if (this.options.natural_arrow_keys) {
-						var ifVerticalAndNotReversed = (this.options.orientation === 'vertical' && !this.options.reversed);
-						var ifHorizontalAndReversed = (this.options.orientation === 'horizontal' && this.options.reversed);
-
-						if (ifVerticalAndNotReversed || ifHorizontalAndReversed) {
-							dir = dir * -1;
-						}
-					}
-
-					var oneStepValuePercentageChange = dir * this.percentage[2];
-					var percentage = this.percentage[handleIdx] + oneStepValuePercentageChange;
-
-					if (percentage > 100) {
-						percentage = 100;
-					} else if (percentage < 0) {
-						percentage = 0;
-					}
-
-					this.dragged = handleIdx;
-					this._adjustPercentageForRangeSliders(percentage);
-					this.percentage[this.dragged] = percentage;
-					this._layout();
-
-					var val = this._calculateValue();
-
-					this._trigger('slideStart', val);
-					this._setDataVal(val);
-					this.setValue(val, true);
-
-					this._trigger('slideStop', val);
-					this._setDataVal(val);
-
-					this._pauseEvent(ev);
-
-					return false;
-				},
-				_pauseEvent: function(ev) {
-					if(ev.stopPropagation) {
-						ev.stopPropagation();
-					}
-				    if(ev.preventDefault) {
-				    	ev.preventDefault();
-				    }
-				    ev.cancelBubble=true;
-				    ev.returnValue=false;
-				},
-				_mousemove: function(ev) {
-					if(!this.options.enabled) {
-						return false;
-					}
-
-					var percentage = this._getPercentage(ev);
-					this._adjustPercentageForRangeSliders(percentage);
-					this.percentage[this.dragged] = this.options.reversed ? 100 - percentage : percentage;
-					this._layout();
-
-					var val = this._calculateValue();
-					this.setValue(val, true);
-
-					return false;
-				},
-				_adjustPercentageForRangeSliders: function(percentage) {
-					if (this.options.range) {
-						if (this.dragged === 0 && this.percentage[1] < percentage) {
-							this.percentage[0] = this.percentage[1];
-							this.dragged = 1;
-						} else if (this.dragged === 1 && this.percentage[0] > percentage) {
-							this.percentage[1] = this.percentage[0];
-							this.dragged = 0;
-						}
-					}
-				},
-				_mouseup: function() {
-					if(!this.options.enabled) {
-						return false;
-					}
-					if (this.touchCapable) {
-						// Touch: Unbind touch event handlers:
-						document.removeEventListener("touchmove", this.mousemove, false);
-						document.removeEventListener("touchend", this.mouseup, false);
-					}
-	                // Unbind mouse event handlers:
-	                document.removeEventListener("mousemove", this.mousemove, false);
-	                document.removeEventListener("mouseup", this.mouseup, false);
-
-					this.inDrag = false;
-					if (this.over === false) {
-						this._hideTooltip();
-					}
-					var val = this._calculateValue();
-
-					this._layout();
-					this._trigger('slideStop', val);
-					this._setDataVal(val);
-
-					return false;
-				},
-				_calculateValue: function() {
-					var val;
-					if (this.options.range) {
-						val = [this.options.min,this.options.max];
-				        if (this.percentage[0] !== 0){
-				            val[0] = (Math.max(this.options.min, this.options.min + Math.round((this.diff * this.percentage[0]/100)/this.options.step)*this.options.step));
-				            val[0] = this._applyPrecision(val[0]);
-				        }
-				        if (this.percentage[1] !== 100){
-				            val[1] = (Math.min(this.options.max, this.options.min + Math.round((this.diff * this.percentage[1]/100)/this.options.step)*this.options.step));
-				            val[1] = this._applyPrecision(val[1]);
-				        }
-					} else {
-						val = (this.options.min + Math.round((this.diff * this.percentage[0]/100)/this.options.step)*this.options.step);
-						if (val < this.options.min) {
-							val = this.options.min;
-						}
-						else if (val > this.options.max) {
-							val = this.options.max;
-						}
-						val = parseFloat(val);
-						val = this._applyPrecision(val);
-					}
-					return val;
-				},
-				_applyPrecision: function(val) {
-					var precision = this.options.precision || this._getNumDigitsAfterDecimalPlace(this.options.step);
-					return this._applyToFixedAndParseFloat(val, precision);
-				},
-				_getNumDigitsAfterDecimalPlace: function(num) {
-					var match = (''+num).match(/(?:\.(\d+))?(?:[eE]([+-]?\d+))?$/);
-					if (!match) { return 0; }
-					return Math.max(0, (match[1] ? match[1].length : 0) - (match[2] ? +match[2] : 0));
-				},
-				_applyToFixedAndParseFloat: function(num, toFixedInput) {
-					var truncatedNum = num.toFixed(toFixedInput);
-					return parseFloat(truncatedNum);
-				},
-				/*
-					Credits to Mike Samuel for the following method!
-					Source: http://stackoverflow.com/questions/10454518/javascript-how-to-retrieve-the-number-of-decimals-of-a-string-number
-				*/
-				_getPercentage: function(ev) {
-					if (this.touchCapable && (ev.type === 'touchstart' || ev.type === 'touchmove')) {
-						ev = ev.touches[0];
-					}
-					var percentage = (ev[this.mousePos] - this.offset[this.stylePos])*100/this.size;
-					percentage = Math.round(percentage/this.percentage[2])*this.percentage[2];
-					return Math.max(0, Math.min(100, percentage));
-				},
-				_validateInputValue: function(val) {
-					if(typeof val === 'number') {
-						return val;
-					} else if(val instanceof Array) {
-						this._validateArray(val);
-						return val;
-					} else {
-						throw new Error( ErrorMsgs.formatInvalidInputErrorMsg(val) );
-					}
-				},
-				_validateArray: function(val) {
-					for(var i = 0; i < val.length; i++) {
-						var input =  val[i];
-						if (typeof input !== 'number') { throw new Error( ErrorMsgs.formatInvalidInputErrorMsg(input) ); }
-					}
-				},
-				_setDataVal: function(val) {
-					var value = "value: '" + val + "'";
-					this.element.setAttribute('data', value);
-					this.element.setAttribute('value', val);
-				},
-				_trigger: function(evt, val) {
-					val = (val || val === 0) ? val : undefined;
-
-					var callbackFnArray = this.eventToCallbackMap[evt];
-					if(callbackFnArray && callbackFnArray.length) {
-						for(var i = 0; i < callbackFnArray.length; i++) {
-							var callbackFn = callbackFnArray[i];
-							callbackFn(val);
-						}
-					}
-
-					/* If JQuery exists, trigger JQuery events */
-					if($) {
-						this._triggerJQueryEvent(evt, val);
-					}
-				},
-				_triggerJQueryEvent: function(evt, val) {
-					var eventData = {
-						type: evt,
-						value: val
-					};
-					this.$element.trigger(eventData);
-					this.$sliderElem.trigger(eventData);
-				},
-				_unbindJQueryEventHandlers: function() {
-					this.$element.off();
-					this.$sliderElem.off();
-				},
-				_setText: function(element, text) {
-					if(typeof element.innerText !== "undefined") {
-				 		element.innerText = text;
-				 	} else if(typeof element.textContent !== "undefined") {
-				 		element.textContent = text;
-				 	}
-				},
-				_removeClass: function(element, classString) {
-					var classes = classString.split(" ");
-					var newClasses = element.className;
-
-					for(var i = 0; i < classes.length; i++) {
-						var classTag = classes[i];
-						var regex = new RegExp("(?:\\s|^)" + classTag + "(?:\\s|$)");
-						newClasses = newClasses.replace(regex, " ");
-					}
-
-					element.className = newClasses.trim();
-				},
-				_addClass: function(element, classString) {
-					var classes = classString.split(" ");
-					var newClasses = element.className;
-
-					for(var i = 0; i < classes.length; i++) {
-						var classTag = classes[i];
-						var regex = new RegExp("(?:\\s|^)" + classTag + "(?:\\s|$)");
-						var ifClassExists = regex.test(newClasses);
-
-						if(!ifClassExists) {
-							newClasses += " " + classTag;
-						}
-					}
-
-					element.className = newClasses.trim();
-				},
-				_offset: function (obj) {
-					var ol = 0;
-					var ot = 0;
-					if (obj.offsetParent) {
-						do {
-						  ol += obj.offsetLeft;
-						  ot += obj.offsetTop;
-						} while (obj = obj.offsetParent);
-					}
-					return {
-						left: ol,
-						top: ot
-					};
-				},
-				_css: function(elementRef, styleName, value) {
-	                if ($) {
-	                    $.style(elementRef, styleName, value);
-	                } else {
-	                    var style = styleName.replace(/^-ms-/, "ms-").replace(/-([\da-z])/gi, function (all, letter) {
-	                        return letter.toUpperCase();
-	                    });
-	                    elementRef.style[style] = value;
-	                }
-				}
-			};
-
-			/*********************************
-
-				Attach to global namespace
-
-			*********************************/
-			if($) {
-				var namespace = $.fn.slider ? 'bootstrapSlider' : 'slider';
-				$.bridget(namespace, Slider);
-			}
-
-		})( $ );
-
-		return Slider;
-	}));
-
-/***/ },
 /* 5 */
 /***/ function(module, exports, __webpack_require__) {
 
@@ -11182,9 +11191,9 @@
 
 	"use strict";
 
-	var PooledClass = __webpack_require__(37);
+	var PooledClass = __webpack_require__(40);
 
-	var traverseAllChildren = __webpack_require__(38);
+	var traverseAllChildren = __webpack_require__(41);
 	var warning = __webpack_require__(34);
 
 	var twoArgumentPooler = PooledClass.twoArgumentPooler;
@@ -11336,12 +11345,12 @@
 	"use strict";
 
 	var ReactElement = __webpack_require__(13);
-	var ReactOwner = __webpack_require__(39);
-	var ReactUpdates = __webpack_require__(40);
+	var ReactOwner = __webpack_require__(37);
+	var ReactUpdates = __webpack_require__(38);
 
 	var assign = __webpack_require__(26);
 	var invariant = __webpack_require__(36);
-	var keyMirror = __webpack_require__(41);
+	var keyMirror = __webpack_require__(39);
 
 	/**
 	 * Every React component is in one of these life cycles.
@@ -11786,23 +11795,23 @@
 	var ReactCurrentOwner = __webpack_require__(12);
 	var ReactElement = __webpack_require__(13);
 	var ReactElementValidator = __webpack_require__(14);
-	var ReactEmptyComponent = __webpack_require__(45);
-	var ReactErrorUtils = __webpack_require__(46);
+	var ReactEmptyComponent = __webpack_require__(42);
+	var ReactErrorUtils = __webpack_require__(43);
 	var ReactLegacyElement = __webpack_require__(19);
-	var ReactOwner = __webpack_require__(39);
+	var ReactOwner = __webpack_require__(37);
 	var ReactPerf = __webpack_require__(22);
-	var ReactPropTransferer = __webpack_require__(47);
-	var ReactPropTypeLocations = __webpack_require__(42);
-	var ReactPropTypeLocationNames = __webpack_require__(48);
-	var ReactUpdates = __webpack_require__(40);
+	var ReactPropTransferer = __webpack_require__(44);
+	var ReactPropTypeLocations = __webpack_require__(45);
+	var ReactPropTypeLocationNames = __webpack_require__(46);
+	var ReactUpdates = __webpack_require__(38);
 
 	var assign = __webpack_require__(26);
-	var instantiateReactComponent = __webpack_require__(49);
+	var instantiateReactComponent = __webpack_require__(47);
 	var invariant = __webpack_require__(36);
-	var keyMirror = __webpack_require__(41);
-	var keyOf = __webpack_require__(50);
-	var monitorCodeUse = __webpack_require__(43);
-	var mapObject = __webpack_require__(44);
+	var keyMirror = __webpack_require__(39);
+	var keyOf = __webpack_require__(48);
+	var monitorCodeUse = __webpack_require__(49);
+	var mapObject = __webpack_require__(50);
 	var shouldUpdateReactComponent = __webpack_require__(51);
 	var warning = __webpack_require__(34);
 
@@ -13585,10 +13594,10 @@
 	"use strict";
 
 	var ReactElement = __webpack_require__(13);
-	var ReactPropTypeLocations = __webpack_require__(42);
+	var ReactPropTypeLocations = __webpack_require__(45);
 	var ReactCurrentOwner = __webpack_require__(12);
 
-	var monitorCodeUse = __webpack_require__(43);
+	var monitorCodeUse = __webpack_require__(49);
 
 	/**
 	 * Warn if there's no key explicitly set on dynamic arrays of children or
@@ -13854,7 +13863,7 @@
 	var ReactElementValidator = __webpack_require__(14);
 	var ReactLegacyElement = __webpack_require__(19);
 
-	var mapObject = __webpack_require__(44);
+	var mapObject = __webpack_require__(50);
 
 	/**
 	 * Create a factory that creates HTML tag elements.
@@ -14050,8 +14059,8 @@
 	var escapeTextForBrowser = __webpack_require__(32);
 	var invariant = __webpack_require__(36);
 	var isEventSupported = __webpack_require__(80);
-	var keyOf = __webpack_require__(50);
-	var monitorCodeUse = __webpack_require__(43);
+	var keyOf = __webpack_require__(48);
+	var monitorCodeUse = __webpack_require__(49);
 
 	var deleteListener = ReactBrowserEventEmitter.deleteListener;
 	var listenTo = ReactBrowserEventEmitter.listenTo;
@@ -14998,7 +15007,7 @@
 	var ReactCurrentOwner = __webpack_require__(12);
 
 	var invariant = __webpack_require__(36);
-	var monitorCodeUse = __webpack_require__(43);
+	var monitorCodeUse = __webpack_require__(49);
 	var warning = __webpack_require__(34);
 
 	var legacyFactoryLogs = {};
@@ -15253,10 +15262,10 @@
 	var ReactInstanceHandles = __webpack_require__(18);
 	var ReactPerf = __webpack_require__(22);
 
-	var containsNode = __webpack_require__(84);
+	var containsNode = __webpack_require__(82);
 	var deprecated = __webpack_require__(27);
-	var getReactRootElementInContainer = __webpack_require__(85);
-	var instantiateReactComponent = __webpack_require__(49);
+	var getReactRootElementInContainer = __webpack_require__(83);
+	var instantiateReactComponent = __webpack_require__(47);
 	var invariant = __webpack_require__(36);
 	var shouldUpdateReactComponent = __webpack_require__(51);
 	var warning = __webpack_require__(34);
@@ -15948,10 +15957,10 @@
 	"use strict";
 
 	var ReactComponent = __webpack_require__(9);
-	var ReactMultiChildUpdateTypes = __webpack_require__(82);
+	var ReactMultiChildUpdateTypes = __webpack_require__(84);
 
-	var flattenChildren = __webpack_require__(83);
-	var instantiateReactComponent = __webpack_require__(49);
+	var flattenChildren = __webpack_require__(85);
+	var instantiateReactComponent = __webpack_require__(47);
 	var shouldUpdateReactComponent = __webpack_require__(51);
 
 	/**
@@ -16466,10 +16475,10 @@
 	"use strict";
 
 	var ReactElement = __webpack_require__(13);
-	var ReactPropTypeLocationNames = __webpack_require__(48);
+	var ReactPropTypeLocationNames = __webpack_require__(46);
 
 	var deprecated = __webpack_require__(27);
-	var emptyFunction = __webpack_require__(86);
+	var emptyFunction = __webpack_require__(88);
 
 	/**
 	 * Collection of methods that allow declaration and validation of props that are
@@ -16825,11 +16834,11 @@
 
 	var ReactElement = __webpack_require__(13);
 	var ReactInstanceHandles = __webpack_require__(18);
-	var ReactMarkupChecksum = __webpack_require__(87);
+	var ReactMarkupChecksum = __webpack_require__(86);
 	var ReactServerRenderingTransaction =
-	  __webpack_require__(88);
+	  __webpack_require__(87);
 
-	var instantiateReactComponent = __webpack_require__(49);
+	var instantiateReactComponent = __webpack_require__(47);
 	var invariant = __webpack_require__(36);
 
 	/**
@@ -17690,7 +17699,7 @@
 
 	"use strict";
 
-	var emptyFunction = __webpack_require__(86);
+	var emptyFunction = __webpack_require__(88);
 
 	/**
 	 * Similar to invariant but only logs a warning if the condition is not met.
@@ -17738,7 +17747,7 @@
 
 	"use strict";
 
-	var keyMirror = __webpack_require__(41);
+	var keyMirror = __webpack_require__(39);
 
 	var PropagationPhases = keyMirror({bubbled: null, captured: null});
 
@@ -17869,317 +17878,12 @@
 	 * LICENSE file in the root directory of this source tree. An additional grant
 	 * of patent rights can be found in the PATENTS file in the same directory.
 	 *
-	 * @providesModule PooledClass
-	 */
-
-	"use strict";
-
-	var invariant = __webpack_require__(36);
-
-	/**
-	 * Static poolers. Several custom versions for each potential number of
-	 * arguments. A completely generic pooler is easy to implement, but would
-	 * require accessing the `arguments` object. In each of these, `this` refers to
-	 * the Class itself, not an instance. If any others are needed, simply add them
-	 * here, or in their own files.
-	 */
-	var oneArgumentPooler = function(copyFieldsFrom) {
-	  var Klass = this;
-	  if (Klass.instancePool.length) {
-	    var instance = Klass.instancePool.pop();
-	    Klass.call(instance, copyFieldsFrom);
-	    return instance;
-	  } else {
-	    return new Klass(copyFieldsFrom);
-	  }
-	};
-
-	var twoArgumentPooler = function(a1, a2) {
-	  var Klass = this;
-	  if (Klass.instancePool.length) {
-	    var instance = Klass.instancePool.pop();
-	    Klass.call(instance, a1, a2);
-	    return instance;
-	  } else {
-	    return new Klass(a1, a2);
-	  }
-	};
-
-	var threeArgumentPooler = function(a1, a2, a3) {
-	  var Klass = this;
-	  if (Klass.instancePool.length) {
-	    var instance = Klass.instancePool.pop();
-	    Klass.call(instance, a1, a2, a3);
-	    return instance;
-	  } else {
-	    return new Klass(a1, a2, a3);
-	  }
-	};
-
-	var fiveArgumentPooler = function(a1, a2, a3, a4, a5) {
-	  var Klass = this;
-	  if (Klass.instancePool.length) {
-	    var instance = Klass.instancePool.pop();
-	    Klass.call(instance, a1, a2, a3, a4, a5);
-	    return instance;
-	  } else {
-	    return new Klass(a1, a2, a3, a4, a5);
-	  }
-	};
-
-	var standardReleaser = function(instance) {
-	  var Klass = this;
-	  ("production" !== process.env.NODE_ENV ? invariant(
-	    instance instanceof Klass,
-	    'Trying to release an instance into a pool of a different type.'
-	  ) : invariant(instance instanceof Klass));
-	  if (instance.destructor) {
-	    instance.destructor();
-	  }
-	  if (Klass.instancePool.length < Klass.poolSize) {
-	    Klass.instancePool.push(instance);
-	  }
-	};
-
-	var DEFAULT_POOL_SIZE = 10;
-	var DEFAULT_POOLER = oneArgumentPooler;
-
-	/**
-	 * Augments `CopyConstructor` to be a poolable class, augmenting only the class
-	 * itself (statically) not adding any prototypical fields. Any CopyConstructor
-	 * you give this may have a `poolSize` property, and will look for a
-	 * prototypical `destructor` on instances (optional).
-	 *
-	 * @param {Function} CopyConstructor Constructor that can be used to reset.
-	 * @param {Function} pooler Customizable pooler.
-	 */
-	var addPoolingTo = function(CopyConstructor, pooler) {
-	  var NewKlass = CopyConstructor;
-	  NewKlass.instancePool = [];
-	  NewKlass.getPooled = pooler || DEFAULT_POOLER;
-	  if (!NewKlass.poolSize) {
-	    NewKlass.poolSize = DEFAULT_POOL_SIZE;
-	  }
-	  NewKlass.release = standardReleaser;
-	  return NewKlass;
-	};
-
-	var PooledClass = {
-	  addPoolingTo: addPoolingTo,
-	  oneArgumentPooler: oneArgumentPooler,
-	  twoArgumentPooler: twoArgumentPooler,
-	  threeArgumentPooler: threeArgumentPooler,
-	  fiveArgumentPooler: fiveArgumentPooler
-	};
-
-	module.exports = PooledClass;
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
-
-/***/ },
-/* 38 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* WEBPACK VAR INJECTION */(function(process) {/**
-	 * Copyright 2013-2014, Facebook, Inc.
-	 * All rights reserved.
-	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
-	 *
-	 * @providesModule traverseAllChildren
-	 */
-
-	"use strict";
-
-	var ReactElement = __webpack_require__(13);
-	var ReactInstanceHandles = __webpack_require__(18);
-
-	var invariant = __webpack_require__(36);
-
-	var SEPARATOR = ReactInstanceHandles.SEPARATOR;
-	var SUBSEPARATOR = ':';
-
-	/**
-	 * TODO: Test that:
-	 * 1. `mapChildren` transforms strings and numbers into `ReactTextComponent`.
-	 * 2. it('should fail when supplied duplicate key', function() {
-	 * 3. That a single child and an array with one item have the same key pattern.
-	 * });
-	 */
-
-	var userProvidedKeyEscaperLookup = {
-	  '=': '=0',
-	  '.': '=1',
-	  ':': '=2'
-	};
-
-	var userProvidedKeyEscapeRegex = /[=.:]/g;
-
-	function userProvidedKeyEscaper(match) {
-	  return userProvidedKeyEscaperLookup[match];
-	}
-
-	/**
-	 * Generate a key string that identifies a component within a set.
-	 *
-	 * @param {*} component A component that could contain a manual key.
-	 * @param {number} index Index that is used if a manual key is not provided.
-	 * @return {string}
-	 */
-	function getComponentKey(component, index) {
-	  if (component && component.key != null) {
-	    // Explicit key
-	    return wrapUserProvidedKey(component.key);
-	  }
-	  // Implicit key determined by the index in the set
-	  return index.toString(36);
-	}
-
-	/**
-	 * Escape a component key so that it is safe to use in a reactid.
-	 *
-	 * @param {*} key Component key to be escaped.
-	 * @return {string} An escaped string.
-	 */
-	function escapeUserProvidedKey(text) {
-	  return ('' + text).replace(
-	    userProvidedKeyEscapeRegex,
-	    userProvidedKeyEscaper
-	  );
-	}
-
-	/**
-	 * Wrap a `key` value explicitly provided by the user to distinguish it from
-	 * implicitly-generated keys generated by a component's index in its parent.
-	 *
-	 * @param {string} key Value of a user-provided `key` attribute
-	 * @return {string}
-	 */
-	function wrapUserProvidedKey(key) {
-	  return '$' + escapeUserProvidedKey(key);
-	}
-
-	/**
-	 * @param {?*} children Children tree container.
-	 * @param {!string} nameSoFar Name of the key path so far.
-	 * @param {!number} indexSoFar Number of children encountered until this point.
-	 * @param {!function} callback Callback to invoke with each child found.
-	 * @param {?*} traverseContext Used to pass information throughout the traversal
-	 * process.
-	 * @return {!number} The number of children in this subtree.
-	 */
-	var traverseAllChildrenImpl =
-	  function(children, nameSoFar, indexSoFar, callback, traverseContext) {
-	    var nextName, nextIndex;
-	    var subtreeCount = 0;  // Count of children found in the current subtree.
-	    if (Array.isArray(children)) {
-	      for (var i = 0; i < children.length; i++) {
-	        var child = children[i];
-	        nextName = (
-	          nameSoFar +
-	          (nameSoFar ? SUBSEPARATOR : SEPARATOR) +
-	          getComponentKey(child, i)
-	        );
-	        nextIndex = indexSoFar + subtreeCount;
-	        subtreeCount += traverseAllChildrenImpl(
-	          child,
-	          nextName,
-	          nextIndex,
-	          callback,
-	          traverseContext
-	        );
-	      }
-	    } else {
-	      var type = typeof children;
-	      var isOnlyChild = nameSoFar === '';
-	      // If it's the only child, treat the name as if it was wrapped in an array
-	      // so that it's consistent if the number of children grows
-	      var storageName =
-	        isOnlyChild ? SEPARATOR + getComponentKey(children, 0) : nameSoFar;
-	      if (children == null || type === 'boolean') {
-	        // All of the above are perceived as null.
-	        callback(traverseContext, null, storageName, indexSoFar);
-	        subtreeCount = 1;
-	      } else if (type === 'string' || type === 'number' ||
-	                 ReactElement.isValidElement(children)) {
-	        callback(traverseContext, children, storageName, indexSoFar);
-	        subtreeCount = 1;
-	      } else if (type === 'object') {
-	        ("production" !== process.env.NODE_ENV ? invariant(
-	          !children || children.nodeType !== 1,
-	          'traverseAllChildren(...): Encountered an invalid child; DOM ' +
-	          'elements are not valid children of React components.'
-	        ) : invariant(!children || children.nodeType !== 1));
-	        for (var key in children) {
-	          if (children.hasOwnProperty(key)) {
-	            nextName = (
-	              nameSoFar + (nameSoFar ? SUBSEPARATOR : SEPARATOR) +
-	              wrapUserProvidedKey(key) + SUBSEPARATOR +
-	              getComponentKey(children[key], 0)
-	            );
-	            nextIndex = indexSoFar + subtreeCount;
-	            subtreeCount += traverseAllChildrenImpl(
-	              children[key],
-	              nextName,
-	              nextIndex,
-	              callback,
-	              traverseContext
-	            );
-	          }
-	        }
-	      }
-	    }
-	    return subtreeCount;
-	  };
-
-	/**
-	 * Traverses children that are typically specified as `props.children`, but
-	 * might also be specified through attributes:
-	 *
-	 * - `traverseAllChildren(this.props.children, ...)`
-	 * - `traverseAllChildren(this.props.leftPanelChildren, ...)`
-	 *
-	 * The `traverseContext` is an optional argument that is passed through the
-	 * entire traversal. It can be used to store accumulations or anything else that
-	 * the callback might find relevant.
-	 *
-	 * @param {?*} children Children tree object.
-	 * @param {!function} callback To invoke upon traversing each child.
-	 * @param {?*} traverseContext Context for traversal.
-	 * @return {!number} The number of children in this subtree.
-	 */
-	function traverseAllChildren(children, callback, traverseContext) {
-	  if (children == null) {
-	    return 0;
-	  }
-
-	  return traverseAllChildrenImpl(children, '', 0, callback, traverseContext);
-	}
-
-	module.exports = traverseAllChildren;
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
-
-/***/ },
-/* 39 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* WEBPACK VAR INJECTION */(function(process) {/**
-	 * Copyright 2013-2014, Facebook, Inc.
-	 * All rights reserved.
-	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
-	 *
 	 * @providesModule ReactOwner
 	 */
 
 	"use strict";
 
-	var emptyObject = __webpack_require__(91);
+	var emptyObject = __webpack_require__(89);
 	var invariant = __webpack_require__(36);
 
 	/**
@@ -18322,7 +18026,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 40 */
+/* 38 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -18338,11 +18042,11 @@
 
 	"use strict";
 
-	var CallbackQueue = __webpack_require__(89);
-	var PooledClass = __webpack_require__(37);
+	var CallbackQueue = __webpack_require__(90);
+	var PooledClass = __webpack_require__(40);
 	var ReactCurrentOwner = __webpack_require__(12);
 	var ReactPerf = __webpack_require__(22);
-	var Transaction = __webpack_require__(90);
+	var Transaction = __webpack_require__(91);
 
 	var assign = __webpack_require__(26);
 	var invariant = __webpack_require__(36);
@@ -18615,7 +18319,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 41 */
+/* 39 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -18673,10 +18377,10 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 42 */
+/* 40 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/**
+	/* WEBPACK VAR INJECTION */(function(process) {/**
 	 * Copyright 2013-2014, Facebook, Inc.
 	 * All rights reserved.
 	 *
@@ -18684,35 +18388,7 @@
 	 * LICENSE file in the root directory of this source tree. An additional grant
 	 * of patent rights can be found in the PATENTS file in the same directory.
 	 *
-	 * @providesModule ReactPropTypeLocations
-	 */
-
-	"use strict";
-
-	var keyMirror = __webpack_require__(41);
-
-	var ReactPropTypeLocations = keyMirror({
-	  prop: null,
-	  context: null,
-	  childContext: null
-	});
-
-	module.exports = ReactPropTypeLocations;
-
-
-/***/ },
-/* 43 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* WEBPACK VAR INJECTION */(function(process) {/**
-	 * Copyright 2014, Facebook, Inc.
-	 * All rights reserved.
-	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
-	 *
-	 * @providesModule monitorCodeUse
+	 * @providesModule PooledClass
 	 */
 
 	"use strict";
@@ -18720,28 +18396,110 @@
 	var invariant = __webpack_require__(36);
 
 	/**
-	 * Provides open-source compatible instrumentation for monitoring certain API
-	 * uses before we're ready to issue a warning or refactor. It accepts an event
-	 * name which may only contain the characters [a-z0-9_] and an optional data
-	 * object with further information.
+	 * Static poolers. Several custom versions for each potential number of
+	 * arguments. A completely generic pooler is easy to implement, but would
+	 * require accessing the `arguments` object. In each of these, `this` refers to
+	 * the Class itself, not an instance. If any others are needed, simply add them
+	 * here, or in their own files.
 	 */
+	var oneArgumentPooler = function(copyFieldsFrom) {
+	  var Klass = this;
+	  if (Klass.instancePool.length) {
+	    var instance = Klass.instancePool.pop();
+	    Klass.call(instance, copyFieldsFrom);
+	    return instance;
+	  } else {
+	    return new Klass(copyFieldsFrom);
+	  }
+	};
 
-	function monitorCodeUse(eventName, data) {
+	var twoArgumentPooler = function(a1, a2) {
+	  var Klass = this;
+	  if (Klass.instancePool.length) {
+	    var instance = Klass.instancePool.pop();
+	    Klass.call(instance, a1, a2);
+	    return instance;
+	  } else {
+	    return new Klass(a1, a2);
+	  }
+	};
+
+	var threeArgumentPooler = function(a1, a2, a3) {
+	  var Klass = this;
+	  if (Klass.instancePool.length) {
+	    var instance = Klass.instancePool.pop();
+	    Klass.call(instance, a1, a2, a3);
+	    return instance;
+	  } else {
+	    return new Klass(a1, a2, a3);
+	  }
+	};
+
+	var fiveArgumentPooler = function(a1, a2, a3, a4, a5) {
+	  var Klass = this;
+	  if (Klass.instancePool.length) {
+	    var instance = Klass.instancePool.pop();
+	    Klass.call(instance, a1, a2, a3, a4, a5);
+	    return instance;
+	  } else {
+	    return new Klass(a1, a2, a3, a4, a5);
+	  }
+	};
+
+	var standardReleaser = function(instance) {
+	  var Klass = this;
 	  ("production" !== process.env.NODE_ENV ? invariant(
-	    eventName && !/[^a-z0-9_]/.test(eventName),
-	    'You must provide an eventName using only the characters [a-z0-9_]'
-	  ) : invariant(eventName && !/[^a-z0-9_]/.test(eventName)));
-	}
+	    instance instanceof Klass,
+	    'Trying to release an instance into a pool of a different type.'
+	  ) : invariant(instance instanceof Klass));
+	  if (instance.destructor) {
+	    instance.destructor();
+	  }
+	  if (Klass.instancePool.length < Klass.poolSize) {
+	    Klass.instancePool.push(instance);
+	  }
+	};
 
-	module.exports = monitorCodeUse;
+	var DEFAULT_POOL_SIZE = 10;
+	var DEFAULT_POOLER = oneArgumentPooler;
+
+	/**
+	 * Augments `CopyConstructor` to be a poolable class, augmenting only the class
+	 * itself (statically) not adding any prototypical fields. Any CopyConstructor
+	 * you give this may have a `poolSize` property, and will look for a
+	 * prototypical `destructor` on instances (optional).
+	 *
+	 * @param {Function} CopyConstructor Constructor that can be used to reset.
+	 * @param {Function} pooler Customizable pooler.
+	 */
+	var addPoolingTo = function(CopyConstructor, pooler) {
+	  var NewKlass = CopyConstructor;
+	  NewKlass.instancePool = [];
+	  NewKlass.getPooled = pooler || DEFAULT_POOLER;
+	  if (!NewKlass.poolSize) {
+	    NewKlass.poolSize = DEFAULT_POOL_SIZE;
+	  }
+	  NewKlass.release = standardReleaser;
+	  return NewKlass;
+	};
+
+	var PooledClass = {
+	  addPoolingTo: addPoolingTo,
+	  oneArgumentPooler: oneArgumentPooler,
+	  twoArgumentPooler: twoArgumentPooler,
+	  threeArgumentPooler: threeArgumentPooler,
+	  fiveArgumentPooler: fiveArgumentPooler
+	};
+
+	module.exports = PooledClass;
 	
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 44 */
+/* 41 */
 /***/ function(module, exports, __webpack_require__) {
 
-	/**
+	/* WEBPACK VAR INJECTION */(function(process) {/**
 	 * Copyright 2013-2014, Facebook, Inc.
 	 * All rights reserved.
 	 *
@@ -18749,53 +18507,182 @@
 	 * LICENSE file in the root directory of this source tree. An additional grant
 	 * of patent rights can be found in the PATENTS file in the same directory.
 	 *
-	 * @providesModule mapObject
+	 * @providesModule traverseAllChildren
 	 */
 
-	'use strict';
+	"use strict";
 
-	var hasOwnProperty = Object.prototype.hasOwnProperty;
+	var ReactElement = __webpack_require__(13);
+	var ReactInstanceHandles = __webpack_require__(18);
+
+	var invariant = __webpack_require__(36);
+
+	var SEPARATOR = ReactInstanceHandles.SEPARATOR;
+	var SUBSEPARATOR = ':';
 
 	/**
-	 * Executes the provided `callback` once for each enumerable own property in the
-	 * object and constructs a new object from the results. The `callback` is
-	 * invoked with three arguments:
-	 *
-	 *  - the property value
-	 *  - the property name
-	 *  - the object being traversed
-	 *
-	 * Properties that are added after the call to `mapObject` will not be visited
-	 * by `callback`. If the values of existing properties are changed, the value
-	 * passed to `callback` will be the value at the time `mapObject` visits them.
-	 * Properties that are deleted before being visited are not visited.
-	 *
-	 * @grep function objectMap()
-	 * @grep function objMap()
-	 *
-	 * @param {?object} object
-	 * @param {function} callback
-	 * @param {*} context
-	 * @return {?object}
+	 * TODO: Test that:
+	 * 1. `mapChildren` transforms strings and numbers into `ReactTextComponent`.
+	 * 2. it('should fail when supplied duplicate key', function() {
+	 * 3. That a single child and an array with one item have the same key pattern.
+	 * });
 	 */
-	function mapObject(object, callback, context) {
-	  if (!object) {
-	    return null;
-	  }
-	  var result = {};
-	  for (var name in object) {
-	    if (hasOwnProperty.call(object, name)) {
-	      result[name] = callback.call(context, object[name], name, object);
-	    }
-	  }
-	  return result;
+
+	var userProvidedKeyEscaperLookup = {
+	  '=': '=0',
+	  '.': '=1',
+	  ':': '=2'
+	};
+
+	var userProvidedKeyEscapeRegex = /[=.:]/g;
+
+	function userProvidedKeyEscaper(match) {
+	  return userProvidedKeyEscaperLookup[match];
 	}
 
-	module.exports = mapObject;
+	/**
+	 * Generate a key string that identifies a component within a set.
+	 *
+	 * @param {*} component A component that could contain a manual key.
+	 * @param {number} index Index that is used if a manual key is not provided.
+	 * @return {string}
+	 */
+	function getComponentKey(component, index) {
+	  if (component && component.key != null) {
+	    // Explicit key
+	    return wrapUserProvidedKey(component.key);
+	  }
+	  // Implicit key determined by the index in the set
+	  return index.toString(36);
+	}
 
+	/**
+	 * Escape a component key so that it is safe to use in a reactid.
+	 *
+	 * @param {*} key Component key to be escaped.
+	 * @return {string} An escaped string.
+	 */
+	function escapeUserProvidedKey(text) {
+	  return ('' + text).replace(
+	    userProvidedKeyEscapeRegex,
+	    userProvidedKeyEscaper
+	  );
+	}
+
+	/**
+	 * Wrap a `key` value explicitly provided by the user to distinguish it from
+	 * implicitly-generated keys generated by a component's index in its parent.
+	 *
+	 * @param {string} key Value of a user-provided `key` attribute
+	 * @return {string}
+	 */
+	function wrapUserProvidedKey(key) {
+	  return '$' + escapeUserProvidedKey(key);
+	}
+
+	/**
+	 * @param {?*} children Children tree container.
+	 * @param {!string} nameSoFar Name of the key path so far.
+	 * @param {!number} indexSoFar Number of children encountered until this point.
+	 * @param {!function} callback Callback to invoke with each child found.
+	 * @param {?*} traverseContext Used to pass information throughout the traversal
+	 * process.
+	 * @return {!number} The number of children in this subtree.
+	 */
+	var traverseAllChildrenImpl =
+	  function(children, nameSoFar, indexSoFar, callback, traverseContext) {
+	    var nextName, nextIndex;
+	    var subtreeCount = 0;  // Count of children found in the current subtree.
+	    if (Array.isArray(children)) {
+	      for (var i = 0; i < children.length; i++) {
+	        var child = children[i];
+	        nextName = (
+	          nameSoFar +
+	          (nameSoFar ? SUBSEPARATOR : SEPARATOR) +
+	          getComponentKey(child, i)
+	        );
+	        nextIndex = indexSoFar + subtreeCount;
+	        subtreeCount += traverseAllChildrenImpl(
+	          child,
+	          nextName,
+	          nextIndex,
+	          callback,
+	          traverseContext
+	        );
+	      }
+	    } else {
+	      var type = typeof children;
+	      var isOnlyChild = nameSoFar === '';
+	      // If it's the only child, treat the name as if it was wrapped in an array
+	      // so that it's consistent if the number of children grows
+	      var storageName =
+	        isOnlyChild ? SEPARATOR + getComponentKey(children, 0) : nameSoFar;
+	      if (children == null || type === 'boolean') {
+	        // All of the above are perceived as null.
+	        callback(traverseContext, null, storageName, indexSoFar);
+	        subtreeCount = 1;
+	      } else if (type === 'string' || type === 'number' ||
+	                 ReactElement.isValidElement(children)) {
+	        callback(traverseContext, children, storageName, indexSoFar);
+	        subtreeCount = 1;
+	      } else if (type === 'object') {
+	        ("production" !== process.env.NODE_ENV ? invariant(
+	          !children || children.nodeType !== 1,
+	          'traverseAllChildren(...): Encountered an invalid child; DOM ' +
+	          'elements are not valid children of React components.'
+	        ) : invariant(!children || children.nodeType !== 1));
+	        for (var key in children) {
+	          if (children.hasOwnProperty(key)) {
+	            nextName = (
+	              nameSoFar + (nameSoFar ? SUBSEPARATOR : SEPARATOR) +
+	              wrapUserProvidedKey(key) + SUBSEPARATOR +
+	              getComponentKey(children[key], 0)
+	            );
+	            nextIndex = indexSoFar + subtreeCount;
+	            subtreeCount += traverseAllChildrenImpl(
+	              children[key],
+	              nextName,
+	              nextIndex,
+	              callback,
+	              traverseContext
+	            );
+	          }
+	        }
+	      }
+	    }
+	    return subtreeCount;
+	  };
+
+	/**
+	 * Traverses children that are typically specified as `props.children`, but
+	 * might also be specified through attributes:
+	 *
+	 * - `traverseAllChildren(this.props.children, ...)`
+	 * - `traverseAllChildren(this.props.leftPanelChildren, ...)`
+	 *
+	 * The `traverseContext` is an optional argument that is passed through the
+	 * entire traversal. It can be used to store accumulations or anything else that
+	 * the callback might find relevant.
+	 *
+	 * @param {?*} children Children tree object.
+	 * @param {!function} callback To invoke upon traversing each child.
+	 * @param {?*} traverseContext Context for traversal.
+	 * @return {!number} The number of children in this subtree.
+	 */
+	function traverseAllChildren(children, callback, traverseContext) {
+	  if (children == null) {
+	    return 0;
+	  }
+
+	  return traverseAllChildrenImpl(children, '', 0, callback, traverseContext);
+	}
+
+	module.exports = traverseAllChildren;
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 45 */
+/* 42 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -18875,7 +18762,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 46 */
+/* 43 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -18911,7 +18798,7 @@
 
 
 /***/ },
-/* 47 */
+/* 44 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -18928,7 +18815,7 @@
 	"use strict";
 
 	var assign = __webpack_require__(26);
-	var emptyFunction = __webpack_require__(86);
+	var emptyFunction = __webpack_require__(88);
 	var invariant = __webpack_require__(36);
 	var joinClasses = __webpack_require__(92);
 	var warning = __webpack_require__(34);
@@ -19081,7 +18968,35 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 48 */
+/* 45 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Copyright 2013-2014, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 *
+	 * @providesModule ReactPropTypeLocations
+	 */
+
+	"use strict";
+
+	var keyMirror = __webpack_require__(39);
+
+	var ReactPropTypeLocations = keyMirror({
+	  prop: null,
+	  context: null,
+	  childContext: null
+	});
+
+	module.exports = ReactPropTypeLocations;
+
+
+/***/ },
+/* 46 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -19112,7 +19027,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 49 */
+/* 47 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -19134,7 +19049,7 @@
 	var ReactElement = __webpack_require__(13);
 	var ReactLegacyElement = __webpack_require__(19);
 	var ReactNativeComponent = __webpack_require__(93);
-	var ReactEmptyComponent = __webpack_require__(45);
+	var ReactEmptyComponent = __webpack_require__(42);
 
 	/**
 	 * Given an `element` create an instance that will actually be mounted.
@@ -19229,7 +19144,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 50 */
+/* 48 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -19266,6 +19181,100 @@
 
 
 	module.exports = keyOf;
+
+
+/***/ },
+/* 49 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(process) {/**
+	 * Copyright 2014, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 *
+	 * @providesModule monitorCodeUse
+	 */
+
+	"use strict";
+
+	var invariant = __webpack_require__(36);
+
+	/**
+	 * Provides open-source compatible instrumentation for monitoring certain API
+	 * uses before we're ready to issue a warning or refactor. It accepts an event
+	 * name which may only contain the characters [a-z0-9_] and an optional data
+	 * object with further information.
+	 */
+
+	function monitorCodeUse(eventName, data) {
+	  ("production" !== process.env.NODE_ENV ? invariant(
+	    eventName && !/[^a-z0-9_]/.test(eventName),
+	    'You must provide an eventName using only the characters [a-z0-9_]'
+	  ) : invariant(eventName && !/[^a-z0-9_]/.test(eventName)));
+	}
+
+	module.exports = monitorCodeUse;
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
+
+/***/ },
+/* 50 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Copyright 2013-2014, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 *
+	 * @providesModule mapObject
+	 */
+
+	'use strict';
+
+	var hasOwnProperty = Object.prototype.hasOwnProperty;
+
+	/**
+	 * Executes the provided `callback` once for each enumerable own property in the
+	 * object and constructs a new object from the results. The `callback` is
+	 * invoked with three arguments:
+	 *
+	 *  - the property value
+	 *  - the property name
+	 *  - the object being traversed
+	 *
+	 * Properties that are added after the call to `mapObject` will not be visited
+	 * by `callback`. If the values of existing properties are changed, the value
+	 * passed to `callback` will be the value at the time `mapObject` visits them.
+	 * Properties that are deleted before being visited are not visited.
+	 *
+	 * @grep function objectMap()
+	 * @grep function objMap()
+	 *
+	 * @param {?object} object
+	 * @param {function} callback
+	 * @param {*} context
+	 * @return {?object}
+	 */
+	function mapObject(object, callback, context) {
+	  if (!object) {
+	    return null;
+	  }
+	  var result = {};
+	  for (var name in object) {
+	    if (hasOwnProperty.call(object, name)) {
+	      result[name] = callback.call(context, object[name], name, object);
+	    }
+	  }
+	  return result;
+	}
+
+	module.exports = mapObject;
 
 
 /***/ },
@@ -19333,7 +19342,7 @@
 	var ExecutionEnvironment = __webpack_require__(29);
 	var SyntheticInputEvent = __webpack_require__(95);
 
-	var keyOf = __webpack_require__(50);
+	var keyOf = __webpack_require__(48);
 
 	var canUseTextInputEvent = (
 	  ExecutionEnvironment.canUseDOM &&
@@ -19557,12 +19566,12 @@
 	var EventPluginHub = __webpack_require__(96);
 	var EventPropagators = __webpack_require__(94);
 	var ExecutionEnvironment = __webpack_require__(29);
-	var ReactUpdates = __webpack_require__(40);
+	var ReactUpdates = __webpack_require__(38);
 	var SyntheticEvent = __webpack_require__(97);
 
 	var isEventSupported = __webpack_require__(80);
 	var isTextInputElement = __webpack_require__(98);
-	var keyOf = __webpack_require__(50);
+	var keyOf = __webpack_require__(48);
 
 	var topLevelTypes = EventConstants.topLevelTypes;
 
@@ -19976,7 +19985,7 @@
 	var SyntheticCompositionEvent = __webpack_require__(100);
 
 	var getTextContentAccessor = __webpack_require__(101);
-	var keyOf = __webpack_require__(50);
+	var keyOf = __webpack_require__(48);
 
 	var END_KEYCODES = [9, 13, 27, 32]; // Tab, Return, Esc, Space
 	var START_KEYCODE = 229;
@@ -20231,7 +20240,7 @@
 
 	"use strict";
 
-	 var keyOf = __webpack_require__(50);
+	 var keyOf = __webpack_require__(48);
 
 	/**
 	 * Module that is injectable into `EventPluginHub`, that specifies a
@@ -20281,7 +20290,7 @@
 	var SyntheticMouseEvent = __webpack_require__(102);
 
 	var ReactMount = __webpack_require__(20);
-	var keyOf = __webpack_require__(50);
+	var keyOf = __webpack_require__(48);
 
 	var topLevelTypes = EventConstants.topLevelTypes;
 	var getFirstReactDOM = ReactMount.getFirstReactDOM;
@@ -20612,7 +20621,7 @@
 
 	var EventConstants = __webpack_require__(35);
 
-	var emptyFunction = __webpack_require__(86);
+	var emptyFunction = __webpack_require__(88);
 
 	var topLevelTypes = EventConstants.topLevelTypes;
 
@@ -20671,7 +20680,7 @@
 
 	"use strict";
 
-	var ReactEmptyComponent = __webpack_require__(45);
+	var ReactEmptyComponent = __webpack_require__(42);
 	var ReactMount = __webpack_require__(20);
 
 	var invariant = __webpack_require__(36);
@@ -20720,12 +20729,12 @@
 	"use strict";
 
 	var ReactDOMIDOperations = __webpack_require__(103);
-	var ReactMarkupChecksum = __webpack_require__(87);
+	var ReactMarkupChecksum = __webpack_require__(86);
 	var ReactMount = __webpack_require__(20);
 	var ReactPerf = __webpack_require__(22);
 	var ReactReconcileTransaction = __webpack_require__(104);
 
-	var getReactRootElementInContainer = __webpack_require__(85);
+	var getReactRootElementInContainer = __webpack_require__(83);
 	var invariant = __webpack_require__(36);
 	var setInnerHTML = __webpack_require__(105);
 
@@ -20842,11 +20851,11 @@
 
 	"use strict";
 
-	var ReactUpdates = __webpack_require__(40);
-	var Transaction = __webpack_require__(90);
+	var ReactUpdates = __webpack_require__(38);
+	var Transaction = __webpack_require__(91);
 
 	var assign = __webpack_require__(26);
-	var emptyFunction = __webpack_require__(86);
+	var emptyFunction = __webpack_require__(88);
 
 	var RESET_BATCHED_UPDATES = {
 	  initialize: emptyFunction,
@@ -20925,7 +20934,7 @@
 	var ReactElement = __webpack_require__(13);
 	var ReactDOM = __webpack_require__(15);
 
-	var keyMirror = __webpack_require__(41);
+	var keyMirror = __webpack_require__(39);
 
 	// Store a reference to the <button> `ReactDOMComponent`. TODO: use string
 	var button = ReactElement.createFactory(ReactDOM.button.type);
@@ -21102,7 +21111,7 @@
 	var ReactElement = __webpack_require__(13);
 	var ReactDOM = __webpack_require__(15);
 	var ReactMount = __webpack_require__(20);
-	var ReactUpdates = __webpack_require__(40);
+	var ReactUpdates = __webpack_require__(38);
 
 	var assign = __webpack_require__(26);
 	var invariant = __webpack_require__(36);
@@ -21337,7 +21346,7 @@
 	var ReactCompositeComponent = __webpack_require__(10);
 	var ReactElement = __webpack_require__(13);
 	var ReactDOM = __webpack_require__(15);
-	var ReactUpdates = __webpack_require__(40);
+	var ReactUpdates = __webpack_require__(38);
 
 	var assign = __webpack_require__(26);
 
@@ -21526,7 +21535,7 @@
 	var ReactCompositeComponent = __webpack_require__(10);
 	var ReactElement = __webpack_require__(13);
 	var ReactDOM = __webpack_require__(15);
-	var ReactUpdates = __webpack_require__(40);
+	var ReactUpdates = __webpack_require__(38);
 
 	var assign = __webpack_require__(26);
 	var invariant = __webpack_require__(36);
@@ -21666,10 +21675,10 @@
 
 	var EventListener = __webpack_require__(109);
 	var ExecutionEnvironment = __webpack_require__(29);
-	var PooledClass = __webpack_require__(37);
+	var PooledClass = __webpack_require__(40);
 	var ReactInstanceHandles = __webpack_require__(18);
 	var ReactMount = __webpack_require__(20);
-	var ReactUpdates = __webpack_require__(40);
+	var ReactUpdates = __webpack_require__(38);
 
 	var assign = __webpack_require__(26);
 	var getEventTarget = __webpack_require__(110);
@@ -21855,12 +21864,12 @@
 	var EventPluginHub = __webpack_require__(96);
 	var ReactComponent = __webpack_require__(9);
 	var ReactCompositeComponent = __webpack_require__(10);
-	var ReactEmptyComponent = __webpack_require__(45);
+	var ReactEmptyComponent = __webpack_require__(42);
 	var ReactBrowserEventEmitter = __webpack_require__(79);
 	var ReactNativeComponent = __webpack_require__(93);
 	var ReactPerf = __webpack_require__(22);
 	var ReactRootIndex = __webpack_require__(81);
-	var ReactUpdates = __webpack_require__(40);
+	var ReactUpdates = __webpack_require__(38);
 
 	var ReactInjection = {
 	  Component: ReactComponent.injection,
@@ -21902,7 +21911,7 @@
 
 	var getActiveElement = __webpack_require__(112);
 	var isTextInputElement = __webpack_require__(98);
-	var keyOf = __webpack_require__(50);
+	var keyOf = __webpack_require__(48);
 	var shallowEqual = __webpack_require__(113);
 
 	var topLevelTypes = EventConstants.topLevelTypes;
@@ -22145,7 +22154,7 @@
 	var getEventCharCode = __webpack_require__(121);
 
 	var invariant = __webpack_require__(36);
-	var keyOf = __webpack_require__(50);
+	var keyOf = __webpack_require__(48);
 	var warning = __webpack_require__(34);
 
 	var topLevelTypes = EventConstants.topLevelTypes;
@@ -23580,12 +23589,99 @@
 	 * LICENSE file in the root directory of this source tree. An additional grant
 	 * of patent rights can be found in the PATENTS file in the same directory.
 	 *
+	 * @providesModule containsNode
+	 * @typechecks
+	 */
+
+	var isTextNode = __webpack_require__(131);
+
+	/*jslint bitwise:true */
+
+	/**
+	 * Checks if a given DOM node contains or is another DOM node.
+	 *
+	 * @param {?DOMNode} outerNode Outer DOM node.
+	 * @param {?DOMNode} innerNode Inner DOM node.
+	 * @return {boolean} True if `outerNode` contains or is `innerNode`.
+	 */
+	function containsNode(outerNode, innerNode) {
+	  if (!outerNode || !innerNode) {
+	    return false;
+	  } else if (outerNode === innerNode) {
+	    return true;
+	  } else if (isTextNode(outerNode)) {
+	    return false;
+	  } else if (isTextNode(innerNode)) {
+	    return containsNode(outerNode, innerNode.parentNode);
+	  } else if (outerNode.contains) {
+	    return outerNode.contains(innerNode);
+	  } else if (outerNode.compareDocumentPosition) {
+	    return !!(outerNode.compareDocumentPosition(innerNode) & 16);
+	  } else {
+	    return false;
+	  }
+	}
+
+	module.exports = containsNode;
+
+
+/***/ },
+/* 83 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Copyright 2013-2014, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 *
+	 * @providesModule getReactRootElementInContainer
+	 */
+
+	"use strict";
+
+	var DOC_NODE_TYPE = 9;
+
+	/**
+	 * @param {DOMElement|DOMDocument} container DOM element that may contain
+	 *                                           a React component
+	 * @return {?*} DOM element that may have the reactRoot ID, or null.
+	 */
+	function getReactRootElementInContainer(container) {
+	  if (!container) {
+	    return null;
+	  }
+
+	  if (container.nodeType === DOC_NODE_TYPE) {
+	    return container.documentElement;
+	  } else {
+	    return container.firstChild;
+	  }
+	}
+
+	module.exports = getReactRootElementInContainer;
+
+
+/***/ },
+/* 84 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Copyright 2013-2014, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 *
 	 * @providesModule ReactMultiChildUpdateTypes
 	 */
 
 	"use strict";
 
-	var keyMirror = __webpack_require__(41);
+	var keyMirror = __webpack_require__(39);
 
 	/**
 	 * When a component's children are updated, a series of update configuration
@@ -23606,7 +23702,7 @@
 
 
 /***/ },
-/* 83 */
+/* 85 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -23624,7 +23720,7 @@
 
 	var ReactTextComponent = __webpack_require__(25);
 
-	var traverseAllChildren = __webpack_require__(38);
+	var traverseAllChildren = __webpack_require__(41);
 	var warning = __webpack_require__(34);
 
 	/**
@@ -23678,132 +23774,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 84 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Copyright 2013-2014, Facebook, Inc.
-	 * All rights reserved.
-	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
-	 *
-	 * @providesModule containsNode
-	 * @typechecks
-	 */
-
-	var isTextNode = __webpack_require__(131);
-
-	/*jslint bitwise:true */
-
-	/**
-	 * Checks if a given DOM node contains or is another DOM node.
-	 *
-	 * @param {?DOMNode} outerNode Outer DOM node.
-	 * @param {?DOMNode} innerNode Inner DOM node.
-	 * @return {boolean} True if `outerNode` contains or is `innerNode`.
-	 */
-	function containsNode(outerNode, innerNode) {
-	  if (!outerNode || !innerNode) {
-	    return false;
-	  } else if (outerNode === innerNode) {
-	    return true;
-	  } else if (isTextNode(outerNode)) {
-	    return false;
-	  } else if (isTextNode(innerNode)) {
-	    return containsNode(outerNode, innerNode.parentNode);
-	  } else if (outerNode.contains) {
-	    return outerNode.contains(innerNode);
-	  } else if (outerNode.compareDocumentPosition) {
-	    return !!(outerNode.compareDocumentPosition(innerNode) & 16);
-	  } else {
-	    return false;
-	  }
-	}
-
-	module.exports = containsNode;
-
-
-/***/ },
-/* 85 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Copyright 2013-2014, Facebook, Inc.
-	 * All rights reserved.
-	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
-	 *
-	 * @providesModule getReactRootElementInContainer
-	 */
-
-	"use strict";
-
-	var DOC_NODE_TYPE = 9;
-
-	/**
-	 * @param {DOMElement|DOMDocument} container DOM element that may contain
-	 *                                           a React component
-	 * @return {?*} DOM element that may have the reactRoot ID, or null.
-	 */
-	function getReactRootElementInContainer(container) {
-	  if (!container) {
-	    return null;
-	  }
-
-	  if (container.nodeType === DOC_NODE_TYPE) {
-	    return container.documentElement;
-	  } else {
-	    return container.firstChild;
-	  }
-	}
-
-	module.exports = getReactRootElementInContainer;
-
-
-/***/ },
 /* 86 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/**
-	 * Copyright 2013-2014, Facebook, Inc.
-	 * All rights reserved.
-	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
-	 *
-	 * @providesModule emptyFunction
-	 */
-
-	function makeEmptyFunction(arg) {
-	  return function() {
-	    return arg;
-	  };
-	}
-
-	/**
-	 * This function accepts and discards inputs; it has no side effects. This is
-	 * primarily useful idiomatically for overridable function endpoints which
-	 * always need to be callable, since JS lacks a null-call idiom ala Cocoa.
-	 */
-	function emptyFunction() {}
-
-	emptyFunction.thatReturns = makeEmptyFunction;
-	emptyFunction.thatReturnsFalse = makeEmptyFunction(false);
-	emptyFunction.thatReturnsTrue = makeEmptyFunction(true);
-	emptyFunction.thatReturnsNull = makeEmptyFunction(null);
-	emptyFunction.thatReturnsThis = function() { return this; };
-	emptyFunction.thatReturnsArgument = function(arg) { return arg; };
-
-	module.exports = emptyFunction;
-
-
-/***/ },
-/* 87 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -23855,7 +23826,7 @@
 
 
 /***/ },
-/* 88 */
+/* 87 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/**
@@ -23872,13 +23843,13 @@
 
 	"use strict";
 
-	var PooledClass = __webpack_require__(37);
-	var CallbackQueue = __webpack_require__(89);
+	var PooledClass = __webpack_require__(40);
+	var CallbackQueue = __webpack_require__(90);
 	var ReactPutListenerQueue = __webpack_require__(133);
-	var Transaction = __webpack_require__(90);
+	var Transaction = __webpack_require__(91);
 
 	var assign = __webpack_require__(26);
-	var emptyFunction = __webpack_require__(86);
+	var emptyFunction = __webpack_require__(88);
 
 	/**
 	 * Provides a `CallbackQueue` queue for collecting `onDOMReady` callbacks
@@ -23972,7 +23943,72 @@
 
 
 /***/ },
+/* 88 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/**
+	 * Copyright 2013-2014, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 *
+	 * @providesModule emptyFunction
+	 */
+
+	function makeEmptyFunction(arg) {
+	  return function() {
+	    return arg;
+	  };
+	}
+
+	/**
+	 * This function accepts and discards inputs; it has no side effects. This is
+	 * primarily useful idiomatically for overridable function endpoints which
+	 * always need to be callable, since JS lacks a null-call idiom ala Cocoa.
+	 */
+	function emptyFunction() {}
+
+	emptyFunction.thatReturns = makeEmptyFunction;
+	emptyFunction.thatReturnsFalse = makeEmptyFunction(false);
+	emptyFunction.thatReturnsTrue = makeEmptyFunction(true);
+	emptyFunction.thatReturnsNull = makeEmptyFunction(null);
+	emptyFunction.thatReturnsThis = function() { return this; };
+	emptyFunction.thatReturnsArgument = function(arg) { return arg; };
+
+	module.exports = emptyFunction;
+
+
+/***/ },
 /* 89 */
+/***/ function(module, exports, __webpack_require__) {
+
+	/* WEBPACK VAR INJECTION */(function(process) {/**
+	 * Copyright 2013-2014, Facebook, Inc.
+	 * All rights reserved.
+	 *
+	 * This source code is licensed under the BSD-style license found in the
+	 * LICENSE file in the root directory of this source tree. An additional grant
+	 * of patent rights can be found in the PATENTS file in the same directory.
+	 *
+	 * @providesModule emptyObject
+	 */
+
+	"use strict";
+
+	var emptyObject = {};
+
+	if ("production" !== process.env.NODE_ENV) {
+	  Object.freeze(emptyObject);
+	}
+
+	module.exports = emptyObject;
+	
+	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
+
+/***/ },
+/* 90 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -23988,7 +24024,7 @@
 
 	"use strict";
 
-	var PooledClass = __webpack_require__(37);
+	var PooledClass = __webpack_require__(40);
 
 	var assign = __webpack_require__(26);
 	var invariant = __webpack_require__(36);
@@ -24075,7 +24111,7 @@
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
 /***/ },
-/* 90 */
+/* 91 */
 /***/ function(module, exports, __webpack_require__) {
 
 	/* WEBPACK VAR INJECTION */(function(process) {/**
@@ -24315,33 +24351,6 @@
 	};
 
 	module.exports = Transaction;
-	
-	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
-
-/***/ },
-/* 91 */
-/***/ function(module, exports, __webpack_require__) {
-
-	/* WEBPACK VAR INJECTION */(function(process) {/**
-	 * Copyright 2013-2014, Facebook, Inc.
-	 * All rights reserved.
-	 *
-	 * This source code is licensed under the BSD-style license found in the
-	 * LICENSE file in the root directory of this source tree. An additional grant
-	 * of patent rights can be found in the PATENTS file in the same directory.
-	 *
-	 * @providesModule emptyObject
-	 */
-
-	"use strict";
-
-	var emptyObject = {};
-
-	if ("production" !== process.env.NODE_ENV) {
-	  Object.freeze(emptyObject);
-	}
-
-	module.exports = emptyObject;
 	
 	/* WEBPACK VAR INJECTION */}.call(exports, __webpack_require__(30)))
 
@@ -24959,10 +24968,10 @@
 
 	"use strict";
 
-	var PooledClass = __webpack_require__(37);
+	var PooledClass = __webpack_require__(40);
 
 	var assign = __webpack_require__(26);
-	var emptyFunction = __webpack_require__(86);
+	var emptyFunction = __webpack_require__(88);
 	var getEventTarget = __webpack_require__(110);
 
 	/**
@@ -25170,7 +25179,7 @@
 
 	var ReactDOMSelection = __webpack_require__(136);
 
-	var containsNode = __webpack_require__(84);
+	var containsNode = __webpack_require__(82);
 	var focusNode = __webpack_require__(137);
 	var getActiveElement = __webpack_require__(112);
 
@@ -25676,12 +25685,12 @@
 
 	"use strict";
 
-	var CallbackQueue = __webpack_require__(89);
-	var PooledClass = __webpack_require__(37);
+	var CallbackQueue = __webpack_require__(90);
+	var PooledClass = __webpack_require__(40);
 	var ReactBrowserEventEmitter = __webpack_require__(79);
 	var ReactInputSelection = __webpack_require__(99);
 	var ReactPutListenerQueue = __webpack_require__(133);
-	var Transaction = __webpack_require__(90);
+	var Transaction = __webpack_require__(91);
 
 	var assign = __webpack_require__(26);
 
@@ -26186,7 +26195,7 @@
 	 * @typechecks
 	 */
 
-	var emptyFunction = __webpack_require__(86);
+	var emptyFunction = __webpack_require__(88);
 
 	/**
 	 * Upstream version of event listener. Does not take into account specific
@@ -27854,7 +27863,7 @@
 
 	"use strict";
 
-	var PooledClass = __webpack_require__(37);
+	var PooledClass = __webpack_require__(40);
 	var ReactBrowserEventEmitter = __webpack_require__(79);
 
 	var assign = __webpack_require__(26);
@@ -28317,7 +28326,7 @@
 	"use strict";
 
 	var Danger = __webpack_require__(146);
-	var ReactMultiChildUpdateTypes = __webpack_require__(82);
+	var ReactMultiChildUpdateTypes = __webpack_require__(84);
 
 	var getTextContentAccessor = __webpack_require__(101);
 	var invariant = __webpack_require__(36);
@@ -28824,7 +28833,7 @@
 	var ExecutionEnvironment = __webpack_require__(29);
 
 	var createNodesFromMarkup = __webpack_require__(147);
-	var emptyFunction = __webpack_require__(86);
+	var emptyFunction = __webpack_require__(88);
 	var getMarkupWrap = __webpack_require__(148);
 	var invariant = __webpack_require__(36);
 
