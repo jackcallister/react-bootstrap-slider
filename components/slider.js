@@ -10,7 +10,8 @@ var Slider = React.createClass({
     max: React.PropTypes.number,
     step: React.PropTypes.number,
     initialValue: React.PropTypes.number,
-    toolTip: React.PropTypes.bool
+    toolTip: React.PropTypes.bool,
+    onSlide: React.PropTypes.func
   },
 
   getDefaultProps: function() {
@@ -19,7 +20,8 @@ var Slider = React.createClass({
       max: 100,
       step: 1,
       initialValue: 50,
-      toolTip: false
+      toolTip: false,
+      onSlide: function() {}
     };
   },
 
@@ -34,6 +36,10 @@ var Slider = React.createClass({
       value: this.props.initialValue,
       tooltip: toolTip
     });
+    
+    slider.on('slide', function(event) {
+      this.props.onSlide(event);
+    }.bind(this));
 
     this.setState({
       slider: slider
