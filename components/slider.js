@@ -1,4 +1,4 @@
-var React = require('react');
+var React = require('react'),
     jQuery = require('jquery'),
     BootstrapSlider = require('bootstrap-slider');
 
