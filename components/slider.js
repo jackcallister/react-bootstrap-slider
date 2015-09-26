@@ -31,7 +31,7 @@ var Slider = React.createClass({
 
   componentDidMount: function() {
     var toolTip = this.props.toolTip ? 'show' : 'hide';
-    var slider = new BootstrapSlider(this.getDOMNode(), {
+    var slider = new BootstrapSlider(React.findDOMNode(this.refs.slider), {
       id: this.props.id,
       min: this.props.min,
       max: this.props.max,
@@ -57,7 +57,7 @@ var Slider = React.createClass({
 
   render: function() {
     return (
-      <div />
+      <div ref='slider' />
     );
   }
 });
