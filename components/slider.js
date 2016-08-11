@@ -12,6 +12,9 @@ var Slider = React.createClass({
     value: React.PropTypes.number,
     toolTip: React.PropTypes.oneOf(['show', 'hide', 'always']),
     onSlide: React.PropTypes.func,
+    inputClass: React.PropTypes.string,
+    inputId: React.PropTypes.string,
+    inputName: React.PropTypes.string,
     enabled: React.PropTypes.bool,
     precision: React.PropTypes.number,
     orientation: React.PropTypes.oneOf(['horizontal', 'vertical']),
@@ -130,7 +133,7 @@ var Slider = React.createClass({
 
   render: function() {
     return (
-      <div ref='slider' />
+      <input ref='slider' className={this.props.inputClass} name={this.props.inputName} id={this.props.inputId} />
     );
   }
 });
