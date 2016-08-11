@@ -6,7 +6,9 @@ var App = React.createClass({
   getInitialState: function() {
     return {
       value: 5,
-      max : 10
+      min: 1,
+      max : 10,
+      step: 2
     };
   },
 
@@ -30,7 +32,11 @@ var App = React.createClass({
   render: function() {
     return (
       <div>
-        <Slider min={0} max={this.state.max} step={1} value={this.state.value} toolTip={false} onSlide={this.didChange} />
+        <Slider onSlide={this.didChange}
+                min={this.state.min}
+                max={this.state.max}
+                step={this.state.step}
+                value={this.state.value} />
         <button onClick={this.increment}>Increment</button>
       </div>
     );
